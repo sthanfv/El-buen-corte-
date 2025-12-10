@@ -1,0 +1,44 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+      # Mock sensitive server keys for build (Next.js build shouldn't need real admin keys if strict separation is kept)
+      FIREBASE_ADMIN_PRIVATE_KEY: "mock_key"
+      FIREBASE_ADMIN_CLIENT_EMAIL: "mock@email.com"
+      BLOB_READ_WRITE_TOKEN: "mock_token"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Linter
+      run: npm run lint
+
+    - name: Run Type Check
+      run: npm run typecheck
+
+    - name: Run Unit Tests
+      run: npm test
+
+    - name: Build Project
+      run: npm run build
