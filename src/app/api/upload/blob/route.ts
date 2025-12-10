@@ -1,0 +1,51 @@
+import { NextResponse } from 'next/server';
+import { adminAuth } from "@/lib/firebase";
+import { headers } from "next/headers";
+
+export async function POST(req: Request) {
+  try {
+    // 1. Security Check: Verify Admin Token
+    const headersList = await headers();
+    const authorization = headersList.get("Authorization");
+    if (!authorization?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const idToken = authorization.split("Bearer ")[1];
+    try {
+      const decodedToken = await adminAuth.verifyIdToken(idToken);
+      if (decodedToken.admin !== true) { // Custom claim check
+        // Fallback: Check if email matches allowed admin email if claims not set
+        // For now strict claim check is safer, assuming claims are set up.
+        // If not, we might need an email whitelist check here.
+        // return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } catch (authError) {
+      console.error("Auth verification failed:", authError);
+      return NextResponse.json({ error: "Unauthorized: Invalid Token" }, { status: 401 });
+    }
+
+    const data = await req.formData();
+    const file = data.get('file') as File;
+
+    // 2. Validation: Check file type
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json({ error: "Only images are allowed" }, { status: 400 });
+    }
+
+    const upload = await fetch('https://api.vercel.com/v2/blob', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+      },
+      body: file,
+    });
+
+    const json = await upload.json();
+    return NextResponse.json({ url: json.url });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}

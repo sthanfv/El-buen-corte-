@@ -1,0 +1,35 @@
+'use client';
+import { ToastProvider } from '@/components/ui/toast';
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { cn } from '@/lib/utils';
+
+const fontSans = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
+
+// Metadata se manejaría en un componente de servidor si fuera necesario
+// export const metadata: Metadata = {
+//   title: 'Buen Corte',
+//   description: 'La mejor selección de carnes premium.',
+// };
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="es">
+      <body
+        className={cn(
+          'font-sans antialiased bg-background',
+          fontSans.variable
+        )}
+      >
+        <ToastProvider>{children}</ToastProvider>
+      </body>
+    </html>
+  );
+}

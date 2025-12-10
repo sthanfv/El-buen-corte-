@@ -1,0 +1,98 @@
+{
+  "hero": [
+    {
+      "src": "https://picsum.photos/seed/hero-main/2000/500",
+      "alt": "Fondo de carnes premium en una parrilla",
+      "aiHint": "grilled meat"
+    }
+  ],
+  "tomahawk": [
+    {
+      "src": "https://picsum.photos/seed/tomahawk-new1/800/600",
+      "alt": "Tomahawk steak on a plate with fries",
+      "aiHint": "tomahawk steak"
+    },
+    {
+      "src": "https://picsum.photos/seed/tomahawk-new2/800/600",
+      "alt": "Cooked tomahawk steak sliced",
+      "aiHint": "sliced steak"
+    },
+    {
+      "src": "https://picsum.photos/seed/tomahawk-new3/800/600",
+      "alt": "Raw tomahawk steak",
+      "aiHint": "raw steak"
+    }
+  ],
+  "ribeye": [
+    {
+      "src": "https://picsum.photos/seed/ribeye1/800/600",
+      "alt": "Raw ribeye steak",
+      "aiHint": "ribeye steak"
+    },
+    {
+      "src": "https://picsum.photos/seed/ribeye2/800/600",
+      "alt": "Grilled ribeye steak",
+      "aiHint": "grilled steak"
+    }
+  ],
+  "picanha": [
+    {
+      "src": "https://picsum.photos/seed/picanha1/800/600",
+      "alt": "Raw picanha wagyu cut",
+      "aiHint": "raw picanha"
+    },
+    {
+      "src": "https://picsum.photos/seed/picanha2/800/600",
+      "alt": "Grilled picanha steak",
+      "aiHint": "grilled picanha"
+    }
+  ],
+  "bondiola": [
+    {
+      "src": "https://picsum.photos/seed/bondiola1/800/600",
+      "alt": "Raw kurobuta pork bondiola",
+      "aiHint": "raw pork"
+    },
+    {
+      "src": "https://picsum.photos/seed/bondiola2/800/600",
+      "alt": "Cooked pork bondiola",
+      "aiHint": "cooked pork"
+    }
+  ],
+  "porkChops": [
+    {
+      "src": "https://picsum.photos/seed/porkchop1/800/600",
+      "alt": "Raw pork chops",
+      "aiHint": "pork chops"
+    },
+    {
+      "src": "https://picsum.photos/seed/porkchop2/800/600",
+      "alt": "Cooked pork chops",
+      "aiHint": "cooked pork"
+    }
+  ],
+  "tbone": [
+    {
+      "src": "https://picsum.photos/seed/tbone1/800/600",
+      "alt": "Raw T-bone steak",
+      "aiHint": "t-bone steak"
+    },
+    {
+      "src": "https://picsum.photos/seed/tbone2/800/600",
+      "alt": "Grilled T-bone steak",
+      "aiHint": "grilled steak"
+    }
+  ],
+  "porkRibs": [
+    {
+      "src": "https://picsum.photos/seed/porkribs1/800/600",
+      "alt": "Raw pork ribs with seasoning",
+      "aiHint": "pork ribs"
+    },
+    {
+      "src": "https://picsum.photos/seed/porkribs2/800/600",
+      "alt": "BBQ pork ribs on a plate",
+      "aiHint": "bbq ribs"
+    }
+  ]
+}
