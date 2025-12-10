@@ -2,12 +2,12 @@ import type { NextConfig } from 'next';
 
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
-  img-src 'self' https://picsum.photos https://images.unsplash.com data:;
-  connect-src 'self' http://127.0.0.1:3400 https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com;
-  frame-src 'self';
+  img-src 'self' https://picsum.photos https://images.unsplash.com https://placehold.co data: blob:;
+  connect-src 'self' http://127.0.0.1:3400 https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com https://vercel.live;
+  frame-src 'self' https://vercel.live;
 `;
 
 const securityHeaders = [
