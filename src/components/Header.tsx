@@ -12,6 +12,15 @@ interface HeaderProps {
   onCartClick: () => void;
 }
 
+import { ModeToggle } from "@/components/ModeToggle"
+
+interface HeaderProps {
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
+  cartCount: number;
+  onCartClick: () => void;
+}
+
 export default function Header({
   searchTerm,
   onSearchTermChange,
@@ -19,7 +28,7 @@ export default function Header({
   onCartClick,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur-md dark:bg-zinc-950/80 dark:border-zinc-800 transition-colors">
       <div className="max-w-7xl mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="lg:hidden">
@@ -28,7 +37,7 @@ export default function Header({
           </Button>
           <div className="flex items-center gap-2">
             <ChefHat className="text-primary w-8 h-8" />
-            <span className="text-2xl font-black tracking-tighter hidden md:block">
+            <span className="text-2xl font-black tracking-tighter hidden md:block dark:text-white">
               Buen<span className="text-primary">Corte</span>
             </span>
           </div>
@@ -44,17 +53,18 @@ export default function Header({
             placeholder="Buscar cortes, origen o categoría..."
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border-transparent border-2 rounded-xl focus:bg-white focus:border-primary focus:outline-none transition-all font-medium text-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border-transparent border-2 rounded-xl focus:bg-white focus:border-primary focus:outline-none transition-all font-medium text-sm dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white"
           />
         </div>
 
         <div className="flex items-center gap-2">
+          <ModeToggle />
           <Button
             variant="ghost"
             onClick={onCartClick}
             className="relative p-3 rounded-xl transition-colors group"
           >
-            <ShoppingBag size={24} className="text-gray-700 group-hover:text-black" />
+            <ShoppingBag size={24} className="text-gray-700 group-hover:text-black dark:text-gray-200 dark:group-hover:text-white" />
             {cartCount > 0 && (
               <Badge
                 variant="destructive"
