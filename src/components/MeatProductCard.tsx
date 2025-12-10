@@ -155,7 +155,7 @@ export default function MeatProductCard({ product, onAddToCart }: Props) {
                         src={img.src}
                         alt={img.alt}
                         fill
-                        className="object-cover transform group-hover:scale-110 transition-transform duration-[2000ms] ease-out"
+                        className="object-cover transform group-hover:scale-110 transition-transform duration-1000 ease-out"
                         data-ai-hint={img.aiHint}
                       />
                     </div>
