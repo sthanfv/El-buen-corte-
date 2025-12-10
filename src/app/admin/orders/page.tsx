@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/firebase/client';
 import AdminGuard from '@/components/AdminGuard';
+import { Button } from '@/components/ui/button';
 import { Loader2, TrendingUp, DollarSign, ShoppingBag } from 'lucide-react';
 import { formatPrice } from '@/data/products';
 import { Badge } from '@/components/ui/badge';
