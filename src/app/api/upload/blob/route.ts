@@ -2,7 +2,21 @@ import { NextResponse } from 'next/server';
 import { adminAuth } from "@/lib/firebase";
 import { headers } from "next/headers";
 
+export const dynamic = 'force-dynamic';
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function POST(req: Request) {
+  console.log("POST /api/upload/blob - Start");
   try {
     // 1. Security Check: Verify Admin Token
     const headersList = await headers();
@@ -35,13 +49,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Only images are allowed" }, { status: 400 });
     }
 
+    // Convert File to Buffer for Vercel API
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     const upload = await fetch('https://api.vercel.com/v2/blob', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-        'x-add-random-suffix': 'false', // Optional: Keep filename if desired
+        'x-add-random-suffix': 'false',
+        'Content-Type': file.type, // Required for upstream Vercel API
       },
-      body: file,
+      body: buffer,
     });
 
     const json = await upload.json();
