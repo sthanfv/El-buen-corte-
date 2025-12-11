@@ -64,11 +64,13 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-        'x-add-random-suffix': 'false',
-        'Content-Type': file.type, // Required for upstream Vercel API
+        'x-add-random-suffix': 'true', // Changed to true to prevent overwrites/conflicts
+        'Content-Type': file.type,
       },
-      body: buffer,
+      body: buffer as unknown as BodyInit,
     });
+
+    console.log(`Upload Status: ${upload.status}, Size: ${file.size}, Type: ${file.type}`);
 
     const json = await upload.json();
 

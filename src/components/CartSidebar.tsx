@@ -79,8 +79,7 @@ export default function OrderSidebar({
       `*Datos del Cliente:*\n` +
       `*Nombre:* ${data.name}\n` +
       `*Dirección:* ${data.address}\n` +
-      `*Método de Pago:* ${
-        data.paymentMethod === 'efectivo' ? 'Efectivo' : 'Transferencia'
+      `*Método de Pago:* ${data.paymentMethod === 'efectivo' ? 'Efectivo' : 'Transferencia'
       }\n\n`;
 
     const orderDetails =
@@ -113,7 +112,7 @@ export default function OrderSidebar({
           name: item.name,
           selectedWeight: item.selectedWeight,
           finalPrice: item.finalPrice,
-          pricePerKg: item.price,
+          pricePerKg: item.pricePerKg,
         })),
         total: total,
       };
