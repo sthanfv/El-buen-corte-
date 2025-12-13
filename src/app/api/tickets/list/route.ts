@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase';
 import { headers } from 'next/headers';
 import { TicketSchema, type Ticket } from '@/schemas/order';
