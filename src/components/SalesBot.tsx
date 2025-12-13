@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useActivityTracker } from '@/hooks/use-activity-tracker';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles, X, ShoppingBag, TrendingUp, LucideIcon } from 'lucide-react';
+import { Sparkles, X, ShoppingBag, TrendingUp, AlertTriangle, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/components/cart-provider';
 
@@ -13,13 +13,13 @@ interface SessionMemory {
     viewedCategories: Record<string, number>;
     viewedProducts: string[];
     lastInteraction: number;
+    shownMessages: Set<string>;
 }
 
 export function SalesBot() {
-    const { logEvent } = useActivityTracker(); // Initializes tracking automatically
+    const { logEvent } = useActivityTracker();
     const pathname = usePathname();
     const { order } = useCart();
-    // const order: any[] = []; // Temporary mock
 
     const [isVisible, setIsVisible] = useState(false);
     const [message, setMessage] = useState('');
@@ -28,7 +28,16 @@ export function SalesBot() {
         viewedCategories: {},
         viewedProducts: [],
         lastInteraction: Date.now(),
+        shownMessages: new Set(),
     });
+
+    // ✅ FIX: Update lastInteraction on navigation
+    useEffect(() => {
+        setMemory(prev => ({
+            ...prev,
+            lastInteraction: Date.now()
+        }));
+    }, [pathname]);
 
     // CLOSE BOT
     const dismiss = () => setIsVisible(false);
@@ -40,7 +49,8 @@ export function SalesBot() {
         }, 5000); // Check rules every 5 seconds
 
         return () => clearInterval(timer);
-    }, [pathname, order, memory]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname, order]); // Removed 'memory' from deps to avoid infinite loop with setMemory in evaluateHeuristics
 
     const evaluateHeuristics = () => {
         if (isVisible) return; // Don't interrupt if already speaking
@@ -51,43 +61,118 @@ export function SalesBot() {
 
         // RULE 1: INDECISION (Dwell time > 30s on product)
         if (isProductPage && timeOnPage > 30 && timeOnPage < 35) {
-            triggerBot("¿Tienes dudas sobre este corte? Es ideal para la parrilla.", Sparkles);
+            triggerBot("¿Tienes dudas sobre este corte? Es ideal para la parrilla.", Sparkles, 'indecision');
             return;
         }
 
         // RULE 2: CART HESITATION (Items in cart, no checkout > 1 min)
         if (order.length > 0 && timeOnPage > 60 && !pathname.includes('cart')) {
-            triggerBot(`Tienes ${order.length} cortes deliciosos esperando. ¿Los preparamos?`, ShoppingBag);
+            triggerBot(`Tienes ${order.length} corte${order.length > 1 ? 's' : ''} delicioso${order.length > 1 ? 's' : ''} esperando. ¿Los preparamos?`, ShoppingBag, 'cart_hesitation');
             return;
         }
 
-        // RULE 3: CATEGORY OBSESSION (Viewed 3+ items of same category)
-        // (Logic would rely on tracking adds, simplified here for demo)
+        // RULE 3: CATEGORY OBSESSION (Viewed 2+ items of same category)
+        const viewedCategories = Object.keys(memory.viewedCategories);
+        if (viewedCategories.length > 0) {
+            const topCategory = viewedCategories.reduce((a, b) =>
+                memory.viewedCategories[a] > memory.viewedCategories[b] ? a : b
+            );
 
-        // RULE 4: WELCOME BACK (Local Storage)
-        // Check once on mount
+            if (memory.viewedCategories[topCategory] >= 2 && timeOnPage > 15 && timeOnPage < 20) {
+                triggerBot(
+                    `Veo que te interesa ${topCategory}. Tenemos más opciones premium de este tipo.`,
+                    TrendingUp,
+                    'category_obsession'
+                );
+                return;
+            }
+        }
+
+        // RULE 4: EMPTY CART ENCOURAGEMENT (After viewing 3+ products, no items in cart)
+        if (memory.viewedProducts.length >= 3 && order.length === 0 && timeOnPage > 40 && timeOnPage < 45) {
+            triggerBot(
+                "Has visto varios cortes increíbles. ¿Te ayudo a elegir el perfecto?",
+                Sparkles,
+                'empty_cart_encouragement'
+            );
+            return;
+        }
     };
 
-    const triggerBot = (msg: string, Icon: any) => {
+    const triggerBot = (msg: string, Icon: LucideIcon, ruleId: string) => {
+        // ✅ ANTI-SPAM: Don't repeat messages
+        if (memory.shownMessages.has(msg)) return;
+
         setMessage(msg);
         setBotIcon(Icon);
         setIsVisible(true);
+
+        // Track bot trigger for analytics
+        logEvent('view_page', {
+            metadata: {
+                salesbot_triggered: true,
+                rule: ruleId
+            }
+        });
+
+        // Mark message as shown
+        setMemory(prev => ({
+            ...prev,
+            shownMessages: new Set(prev.shownMessages).add(msg)
+        }));
+
         // Auto-dismiss after 10s
         setTimeout(() => setIsVisible(false), 10000);
     };
 
     // --- RETURN VISITOR CHECK ---
     useEffect(() => {
-        const lastVisit = localStorage.getItem('last_visit');
-        const now = Date.now();
+        try {
+            const lastVisit = localStorage.getItem('bc_last_visit');
+            const now = Date.now();
 
-        if (lastVisit) {
-            const days = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
-            if (days > 1) {
-                setTimeout(() => triggerBot("¡Qué bueno verte de nuevo! Tenemos cortes frescos hoy.", TrendingUp), 2000);
+            // ✅ SECURITY: Validate localStorage value
+            if (lastVisit && /^\d+$/.test(lastVisit)) {
+                const timestamp = parseInt(lastVisit, 10);
+
+                // ✅ SECURITY: Validate timestamp is sane
+                if (!isNaN(timestamp) && timestamp < now && timestamp > (now - 30 * 24 * 60 * 60 * 1000)) {
+                    const days = (now - timestamp) / (1000 * 60 * 60 * 24);
+                    if (days > 1 && days < 7) {
+                        setTimeout(() =>
+                            triggerBot("¡Qué bueno verte de nuevo! Tenemos cortes frescos hoy.", TrendingUp, 'return_visitor'),
+                            2000
+                        );
+                    }
+                }
             }
+            localStorage.setItem('bc_last_visit', now.toString());
+        } catch (error) {
+            // ✅ SECURITY: Fail silently if localStorage is disabled
         }
-        localStorage.setItem('last_visit', now.toString());
+    }, []);
+
+    // Public method to track product views (to be called from product pages)
+    useEffect(() => {
+        // Expose method globally for product pages to call
+        if (typeof window !== 'undefined') {
+            (window as any).salesBotTrackCategory = (category: string) => {
+                setMemory(prev => ({
+                    ...prev,
+                    viewedCategories: {
+                        ...prev.viewedCategories,
+                        [category]: (prev.viewedCategories[category] || 0) + 1
+                    }
+                }));
+            };
+
+            (window as any).salesBotTrackProduct = (productId: string) => {
+                setMemory(prev => ({
+                    ...prev,
+                    viewedProducts: [...new Set([...prev.viewedProducts, productId])]
+                }));
+            };
+        }
     }, []);
 
     if (!isVisible) return null;
@@ -107,18 +192,13 @@ export function SalesBot() {
                     <div className="flex-1 space-y-2">
                         <div className="flex justify-between items-start">
                             <h5 className="font-semibold text-sm text-primary">Asistente Virtual</h5>
-                            <button onClick={dismiss} className="text-zinc-400 hover:text-zinc-600">
+                            <button onClick={dismiss} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
                         <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                             {message}
                         </p>
-                        {/* <div className="pt-1">
-                    <Button variant="link" size="sm" className="h-auto p-0 text-primary">
-                        Ver sugerencia &rarr;
-                    </Button>
-                </div> */}
                     </div>
                 </div>
             </motion.div>

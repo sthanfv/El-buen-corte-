@@ -1,11 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
-import { ShoppingBag, Trash2, X, MessageSquareQuote } from 'lucide-react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { formatPrice, APP_CONFIG } from '@/data/products';
+import { ShoppingBag, Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { formatPrice } from '@/data/products';
 import type { Product } from '@/types/products';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,21 +11,11 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
-import { Input } from './ui/input';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from './ui/form';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
+import { OrderFormModal } from './OrderFormModal';
+import { useToast } from '@/hooks/use-toast';
 
 export interface OrderItem extends Omit<Product, 'images'> {
   images: { src: string; alt: string; aiHint: string }[];
@@ -35,16 +23,6 @@ export interface OrderItem extends Omit<Product, 'images'> {
   selectedWeight: number;
   finalPrice: number;
 }
-
-const OrderFormSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido.'),
-  address: z.string().min(1, 'La dirección es requerida.'),
-  paymentMethod: z.enum(['efectivo', 'transferencia'], {
-    required_error: 'Debes seleccionar un método de pago.',
-  }),
-});
-
-type OrderFormValues = z.infer<typeof OrderFormSchema>;
 
 interface Props {
   isOpen: boolean;
@@ -54,262 +32,208 @@ interface Props {
   setOrder: React.Dispatch<React.SetStateAction<OrderItem[]>>;
 }
 
-export default function OrderSidebar({
+export default function CartSidebar({
   isOpen,
   onClose,
   order,
   onRemove,
   setOrder,
 }: Props) {
-  const total = order.reduce((acc, item) => acc + item.finalPrice, 0);
+  const [showOrderForm, setShowOrderForm] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<OrderFormValues>({
-    resolver: zodResolver(OrderFormSchema),
-    defaultValues: {
-      name: '',
-      address: '',
-      paymentMethod: 'efectivo',
-    },
-  });
+  const total = order.reduce((acc, item) => acc + item.finalPrice, 0);
 
-  const generateWhatsAppMessage = (data: OrderFormValues) => {
-    const header = '*¡Nuevo Pedido de Buen Corte!* 🥩\n\n';
-    const clientDetails =
-      `*Datos del Cliente:*\n` +
-      `*Nombre:* ${data.name}\n` +
-      `*Dirección:* ${data.address}\n` +
-      `*Método de Pago:* ${data.paymentMethod === 'efectivo' ? 'Efectivo' : 'Transferencia'
-      }\n\n`;
-
-    const orderDetails =
-      `*Resumen del Pedido:*\n` +
-      order
-        .map(
-          (item) =>
-            `  - ${item.name} (${item.selectedWeight.toFixed(
-              1
-            )} Kg): *${formatPrice(item.finalPrice)}*`
-        )
-        .join('\n') +
-      `\n\n`;
-
-    const totalLine = `*TOTAL: ${formatPrice(total)}*`;
-    return encodeURIComponent(
-      header + clientDetails + orderDetails + totalLine
+  // ✅ Update weight and recalculate price
+  const updateWeight = (orderId: string, delta: number) => {
+    setOrder((prevOrder) =>
+      prevOrder.map((item) => {
+        if (item.orderId === orderId) {
+          const newWeight = Math.max(0.1, Math.min(50, item.selectedWeight + delta));
+          return {
+            ...item,
+            selectedWeight: newWeight,
+            finalPrice: newWeight * item.pricePerKg,
+          };
+        }
+        return item;
+      })
     );
   };
 
-  const onSubmit = async (data: OrderFormValues) => {
-    try {
-      // 1. Prepare Order Data
-      const orderPayload = {
-        customerName: data.name,
-        customerAddress: data.address,
-        paymentMethod: data.paymentMethod,
-        items: order.map((item) => ({
-          id: item.id,
-          name: item.name,
-          selectedWeight: item.selectedWeight,
-          finalPrice: item.finalPrice,
-          pricePerKg: item.pricePerKg,
-        })),
-        total: total,
-      };
-
-      // 2. Save to Backend (Optimistic: don't block user if fails, but log it)
-      // Actually, we should block slightly to ensure we have the record.
+  const handleContinue = () => {
+    if (order.length === 0) {
       toast({
-        title: 'Procesando...',
-        message: 'Generando tu pedido para WhatsApp...',
+        title: 'Carrito vacío',
+        description: 'Agrega productos antes de continuar',
+        variant: 'destructive',
       });
-
-      const res = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!res.ok) {
-        console.error('Error saving order', await res.text());
-        // Proceed anyway so sales aren't lost, but maybe warn?
-      }
-
-      // 3. Generate WhatsApp Link
-      const message = generateWhatsAppMessage(data);
-      const whatsappUrl = `https://wa.me/${APP_CONFIG.whatsappNumber}?text=${message}`;
-
-      window.open(whatsappUrl, '_blank');
-
-      toast({
-        type: 'success',
-        title: '¡Pedido Iniciado!',
-        message: 'Continúa la conversación en WhatsApp para finalizar.',
-      });
-
-      // 4. Clear Cart
-      form.reset();
-      setOrder([]);
-      onClose();
-    } catch (error) {
-      console.error('Error in checkout', error);
-      toast({
-        type: 'error',
-        message: 'Hubo un problema iniciando el pedido.',
-      });
+      return;
     }
+    setShowOrderForm(true);
+  };
+
+  const handleOrderSuccess = () => {
+    // Clear cart after successful order
+    setOrder([]);
+    onClose();
+    setShowOrderForm(false);
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="flex flex-col w-full sm:max-w-md p-0">
-        <SheetHeader className="p-6 border-b bg-gray-50">
-          <SheetTitle className="font-black text-xl flex items-center gap-2">
-            Tu Pedido ({order.length})
-          </SheetTitle>
-        </SheetHeader>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent className="flex flex-col w-full sm:max-w-lg p-0">
+          {/* Header */}
+          <SheetHeader className="p-6 border-b bg-gradient-to-r from-primary/5 to-primary/10">
+            <SheetTitle className="font-black text-2xl flex items-center gap-3">
+              <ShoppingCart className="h-7 w-7 text-primary" />
+              Tu Carrito
+              {order.length > 0 && (
+                <span className="ml-2 bg-primary text-primary-foreground text-sm font-bold px-3 py-1 rounded-full">
+                  {order.length}
+                </span>
+              )}
+            </SheetTitle>
+          </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {order.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-muted-foreground">
-              <ShoppingBag className="h-20 w-20" strokeWidth={1} />
-              <p>Tu pedido está vacío.</p>
-              <SheetClose asChild>
-                <Button onClick={onClose} variant="outline">
-                  Seguir comprando
-                </Button>
-              </SheetClose>
-            </div>
-          ) : (
-            order.map((item) => (
-              <div
-                key={item.orderId}
-                className="flex gap-4 p-4 items-start bg-white border border-gray-100 rounded-2xl shadow-sm"
-              >
-                <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                  <Image
-                    src={item.images[0].src}
-                    alt={item.images[0].alt}
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                    data-ai-hint={item.images[0].aiHint}
-                  />
+          {/* Cart Items List */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {order.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center gap-6 py-12">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-8">
+                  <ShoppingBag className="h-24 w-24 text-gray-400" strokeWidth={1.5} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-bold leading-tight">{item.name}</h4>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    {item.selectedWeight.toFixed(1)} Kg • {item.category}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-black text-primary">
-                      {formatPrice(item.finalPrice)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-primary"
-                      onClick={() => onRemove(item.orderId)}
-                    >
-                      <Trash2 size={16} />
-                      <span className="sr-only">Remover item</span>
-                    </Button>
-                  </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-2">Tu carrito está vacío</h3>
+                  <p className="text-muted-foreground">Agrega productos para comenzar tu pedido</p>
                 </div>
+                <SheetClose asChild>
+                  <Button onClick={onClose} size="lg" className="mt-4">
+                    Ver Productos
+                  </Button>
+                </SheetClose>
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              <div className="space-y-4">
+                {order.map((item) => (
+                  <div
+                    key={item.orderId}
+                    className="flex gap-4 p-4 bg-white dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-800 rounded-xl hover:border-primary/30 transition-all"
+                  >
+                    {/* Product Image */}
+                    <div className="relative w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-gray-100">
+                      <Image
+                        src={item.images[0].src}
+                        alt={item.images[0].alt}
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                        data-ai-hint={item.images[0].aiHint}
+                      />
+                    </div>
 
-        {order.length > 0 && (
-          <SheetFooter className="p-6 border-t bg-gray-50 flex-col space-y-4">
-            <div className="flex justify-between items-center font-black text-lg">
-              <span>Total Estimado</span>
-              <span>{formatPrice(total)}</span>
-            </div>
-            <Separator />
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre Completo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Tu nombre" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dirección de Entrega</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Ej: Calle 5 # 10-15, Apto 201"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Método de Pago</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex gap-4"
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-base leading-tight mb-1 truncate">
+                        {item.name}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        ${item.pricePerKg.toLocaleString('es-CO')}/kg • {item.category}
+                      </p>
+
+                      {/* Weight Controls */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 rounded-full"
+                          onClick={() => updateWeight(item.orderId, -0.1)}
+                          disabled={item.selectedWeight <= 0.1}
                         >
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="efectivo" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Efectivo
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="transferencia" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Transferencia
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          <Minus className="h-4 w-4" />
+                        </Button>
 
-                <Button
-                  type="submit"
-                  className="w-full py-4 h-auto bg-green-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-green-700 transition-colors shadow-xl disabled:opacity-50 flex items-center gap-2"
-                  disabled={order.length === 0}
-                >
-                  <MessageSquareQuote size={18} />
-                  Enviar Pedido por WhatsApp
-                </Button>
-              </form>
-            </Form>
-          </SheetFooter>
-        )}
-      </SheetContent>
-    </Sheet>
+                        <div className="flex-1 text-center">
+                          <span className="font-bold text-lg">
+                            {item.selectedWeight.toFixed(1)}
+                          </span>
+                          <span className="text-sm text-muted-foreground ml-1">kg</span>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 rounded-full"
+                          onClick={() => updateWeight(item.orderId, 0.1)}
+                          disabled={item.selectedWeight >= 50}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Price and Remove */}
+                      <div className="flex justify-between items-center">
+                        <span className="font-black text-lg text-primary">
+                          {formatPrice(item.finalPrice)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                          onClick={() => onRemove(item.orderId)}
+                        >
+                          <Trash2 size={16} className="mr-1" />
+                          Eliminar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer with Total and Continue Button */}
+          {order.length > 0 && (
+            <div className="p-6 border-t bg-gradient-to-r from-primary/5 to-primary/10 space-y-4">
+              <Separator className="mb-4" />
+
+              {/* Total */}
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold text-muted-foreground">
+                  Total Estimado:
+                </span>
+                <span className="text-3xl font-black text-primary">
+                  {formatPrice(total)}
+                </span>
+              </div>
+
+              {/* Continue Button */}
+              <Button
+                onClick={handleContinue}
+                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                Continuar con el Pedido
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                Completa tus datos en el siguiente paso
+              </p>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Order Form Modal */}
+      <OrderFormModal
+        isOpen={showOrderForm}
+        onClose={() => setShowOrderForm(false)}
+        order={order}
+        total={total}
+        onSuccess={handleOrderSuccess}
+      />
+    </>
   );
 }

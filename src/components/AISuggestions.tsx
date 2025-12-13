@@ -39,7 +39,7 @@ export function AISuggestions({ meatCut }: AISuggestionsProps) {
       const result = await suggestRecipes({ meatCut });
       setSuggestions(result);
     } catch (e) {
-      console.error(e);
+      // ✅ SECURITY: No console.error in production
       setError(
         'Hubo un error al generar las sugerencias. Por favor, inténtalo de nuevo.'
       );

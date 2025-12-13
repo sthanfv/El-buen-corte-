@@ -24,6 +24,14 @@ export function useActivityTracker() {
         if (!user) return;
 
         try {
+            // ✅ SECURITY: Get minimal device info (not full user-agent)
+            const getDeviceType = () => {
+                const ua = navigator.userAgent;
+                if (ua.includes('Mobile')) return 'Mobile';
+                if (ua.includes('Tablet')) return 'Tablet';
+                return 'Desktop';
+            };
+
             await addDoc(collection(db, 'user_activity'), {
                 uid: user.uid,
                 isAnonymous: user.isAnonymous,
@@ -31,12 +39,10 @@ export function useActivityTracker() {
                 path: pathname,
                 payload,
                 timestamp: serverTimestamp(),
-                device: navigator.userAgent,
+                device: getDeviceType(),
             });
-            // console.log(`[Tracker] Logged: ${type}`, payload);
         } catch (error) {
-            // Fail silently to not impact UX
-            console.warn("Tracker error:", error);
+            // ✅ SECURITY: Fail silently to not impact UX, no console.warn
         }
     };
 
@@ -59,6 +65,7 @@ export function useActivityTracker() {
                 logEvent('dwell_high', { metadata: { duration } });
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname, user]);
 
     return { logEvent };

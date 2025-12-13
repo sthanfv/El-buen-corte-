@@ -1,0 +1,328 @@
+'use client';
+
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { MessageSquareQuote, Loader2, CheckCircle2 } from 'lucide-react';
+import { CustomerInfoSchema, type CustomerInfo, type OrderItem } from '@/schemas/order';
+import { formatPrice } from '@/data/products';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+    FormDescription,
+} from '@/components/ui/form';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/firebase/client';
+
+interface Props {
+    isOpen: boolean;
+    onClose: () => void;
+    order: any[]; // OrderItem from CartSidebar
+    total: number;
+    onSuccess: () => void;
+}
+
+export function OrderFormModal({ isOpen, onClose, order, total, onSuccess }: Props) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
+
+    const form = useForm<CustomerInfo>({
+        resolver: zodResolver(CustomerInfoSchema),
+        defaultValues: {
+            customerName: '',
+            customerPhone: '',
+            customerAddress: '',
+            neighborhood: '',
+            city: 'Bogotá',
+            notes: '',
+            deliveryDate: '',
+            deliveryTime: '',
+        },
+    });
+
+    const onSubmit = async (data: CustomerInfo) => {
+        setIsSubmitting(true);
+
+        try {
+            // ✅ SECURITY: Get Firebase auth token
+            const idToken = await auth.currentUser?.getIdToken();
+
+            // Prepare order payload
+            const orderPayload = {
+                customerInfo: data,
+                items: order.map((item) => ({
+                    id: item.id || item.orderId,
+                    name: item.name,
+                    selectedWeight: item.selectedWeight,
+                    finalPrice: item.finalPrice,
+                    pricePerKg: item.pricePerKg,
+                    category: item.category,
+                    imageUrl: item.images?.[0]?.src,
+                })),
+                total,
+                paymentMethod: 'efectivo' as const, // You can add this field to the form if needed
+            };
+
+            // ✅ SECURITY: Call secure API endpoint
+            const response = await fetch('/api/orders/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(idToken && { Authorization: `Bearer ${idToken}` }),
+                },
+                body: JSON.stringify(orderPayload),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Error al procesar el pedido');
+            }
+
+            const result = await response.json();
+
+            // Show success message
+            toast({
+                title: '¡Pedido creado!',
+                description: `Ticket #${result.orderNumber} generado`,
+            });
+
+            // ✅ Open WhatsApp with the secure URL from server
+            if (result.whatsappURL) {
+                window.open(result.whatsappURL, '_blank');
+            }
+
+            // Clear form and close
+            form.reset();
+            onSuccess();
+        } catch (error) {
+            console.error('Order error:', error);
+
+            // Handle rate limit error
+            if ((error as Error).message.includes('límite')) {
+                toast({
+                    title: 'Límite alcanzado',
+                    description: (error as Error).message,
+                    variant: 'destructive',
+                });
+            } else {
+                toast({
+                    title: 'Error',
+                    description: 'No se pudo procesar tu pedido. Intenta nuevamente.',
+                    variant: 'destructive',
+                });
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        Completa tu Pedido
+                    </DialogTitle>
+                    <DialogDescription>
+                        Ingresa tus datos de entrega. El pedido se enviará por WhatsApp.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        {/* Name */}
+                        <FormField
+                            control={form.control}
+                            name="customerName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nombre Completo *</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Juan Pérez" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Phone */}
+                        <FormField
+                            control={form.control}
+                            name="customerPhone"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Teléfono / WhatsApp *</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="+57 300 123 4567" {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                        Te contactaremos para confirmar tu pedido
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Address */}
+                        <FormField
+                            control={form.control}
+                            name="customerAddress"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Dirección de Entrega *</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Calle 45 #12-34, Apto 301" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Neighborhood and City */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="neighborhood"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Barrio</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Chapinero" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="city"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Ciudad *</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Bogotá" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Delivery Date and Time */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="deliveryDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Fecha de Entrega</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="deliveryTime"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Hora Preferida</FormLabel>
+                                        <FormControl>
+                                            <Input type="time" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Notes */}
+                        <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Notas Adicionales (Opcional)</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="Indicaciones especiales, referencias, puntos de referencia..."
+                                            className="resize-none"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>
+                                        Máximo 500 caracteres
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Total Summary */}
+                        <div className="bg-primary/5 p-4 rounded-lg border-2 border-primary/20">
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold">Total del Pedido:</span>
+                                <span className="text-2xl font-black text-primary">
+                                    {formatPrice(total)}
+                                </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                {order.length} producto{order.length > 1 ? 's' : ''}
+                            </p>
+                        </div>
+
+                        {/* Submit Button */}
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onClose}
+                                disabled={isSubmitting}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Procesando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <MessageSquareQuote className="mr-2 h-4 w-4" />
+                                        Enviar por WhatsApp
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}

@@ -264,10 +264,10 @@ export default function EditProductPage() {
   if (isFetching) {
     return (
       <AdminGuard>
-        <div className=\"flex items-center justify-center min-h-screen\">
-          <div className=\"text-center\">
-            <Loader2 className=\"h-12 w-12 animate-spin text-primary mx-auto mb-4\" />
-            <p className=\"text-muted-foreground\">Cargando producto...</p>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Cargando producto...</p>
           </div>
         </div>
       </AdminGuard>
@@ -276,47 +276,47 @@ export default function EditProductPage() {
 
   return (
     <AdminGuard>
-      <div className=\"max-w-4xl mx-auto p-4 md:p-8\">
-        <div className=\"flex items-center justify-between mb-6\">
-          <div className=\"flex items-center gap-4\">
-            <Link href=\"/admin/products\" passHref>
-              <Button variant=\"ghost\" size=\"icon\">
-                <ArrowLeft className=\"h-4 w-4\" />
+      <div className="max-w-4xl mx-auto p-4 md:p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link href="/admin/products" passHref>
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className=\"text-3xl font-black\">Editar Producto</h1>
+            <h1 className="text-3xl font-black">Editar Producto</h1>
           </div>
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className=\"space-y-8\">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             {/* Current Image Preview */}
             {currentImageUrl && (
-              <Card className=\"p-4\">
-                <h3 className=\"text-sm font-semibold mb-2\">Imagen Actual</h3>
-                <div className=\"relative w-32 h-32 rounded-lg overflow-hidden border\">
+              <Card className="p-4">
+                <h3 className="text-sm font-semibold mb-2">Imagen Actual</h3>
+                <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
                   <Image
                     src={currentImageUrl}
-                    alt=\"Imagen actual\"
+                    alt="Imagen actual"
                     fill
-                    className=\"object-cover\"
+                    className="object-cover"
                   />
                 </div>
-                <p className=\"text-xs text-muted-foreground mt-2\">
+                <p className="text-xs text-muted-foreground mt-2">
                   Puedes subir una nueva imagen para reemplazarla
-                 </p>
+                </p>
               </Card>
             )}
 
-            <div className=\"grid grid-cols-1 md:grid-cols-2 gap-8\">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
-                name=\"name\"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nombre del Producto *</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: Tomahawk King\" {...field} />
+                      <Input placeholder="Ej: Tomahawk King" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -324,12 +324,12 @@ export default function EditProductPage() {
               />
               <FormField
                 control={form.control}
-                name=\"category\"
+                name="category"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoría *</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: Res\" {...field} />
+                      <Input placeholder="Ej: Res" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -337,15 +337,15 @@ export default function EditProductPage() {
               />
             </div>
 
-            <div className=\"grid grid-cols-1 md:grid-cols-2 gap-8\">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
-                name=\"pricePerKg\"
+                name="pricePerKg"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Precio por Kg *</FormLabel>
                     <FormControl>
-                      <Input type=\"number\" placeholder=\"Ej: 125000\" {...field} />
+                      <Input type="number" placeholder="Ej: 125000" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -353,12 +353,12 @@ export default function EditProductPage() {
               />
               <FormField
                 control={form.control}
-                name=\"stock\"
+                name="stock"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stock Disponible *</FormLabel>
                     <FormControl>
-                      <Input type=\"number\" placeholder=\"Ej: 5\" {...field} />
+                      <Input type="number" placeholder="Ej: 5" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -368,17 +368,17 @@ export default function EditProductPage() {
 
             <FormField
               control={form.control}
-              name=\"image\"
+              name="image"
               render={({ field: { onChange, value, ...rest } }) => (
                 <FormItem>
                   <FormLabel>
-                    <Upload className=\"inline mr-2 h-4 w-4\" />
+                    <Upload className="inline mr-2 h-4 w-4" />
                     Nueva Imagen (Opcional)
                   </FormLabel>
                   <FormControl>
                     <Input
-                      type=\"file\"
-                      accept=\"image/png, image/jpeg, image/webp\"
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
                       onChange={(e) => onChange(e.target.files)}
                       {...rest}
                     />
@@ -392,27 +392,27 @@ export default function EditProductPage() {
             />
 
             {uploadProgress > 0 && uploadProgress < 100 && (
-              <div className=\"w-full bg-gray-200 rounded-full h-2\">
+              <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className=\"bg-primary h-2 rounded-full transition-all duration-300\"
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
             )}
 
-            <h2 className=\"text-xl font-bold border-b pb-2 mt-10\">
+            <h2 className="text-xl font-bold border-b pb-2 mt-10">
               Detalles Adicionales
             </h2>
 
             <FormField
               control={form.control}
-              name=\"corte\"
+              name="corte"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Descripción del Corte</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder=\"Ej: Corte grueso con hueso de la costilla...\"
+                      placeholder="Ej: Corte grueso con hueso de la costilla..."
                       {...field}
                     />
                   </FormControl>
@@ -421,15 +421,15 @@ export default function EditProductPage() {
               )}
             />
 
-            <div className=\"grid grid-cols-1 md:grid-cols-3 gap-8\">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <FormField
                 control={form.control}
-                name=\"origen\"
+                name="origen"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Origen</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: Angus (USA)\" {...field} />
+                      <Input placeholder="Ej: Angus (USA)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -437,12 +437,12 @@ export default function EditProductPage() {
               />
               <FormField
                 control={form.control}
-                name=\"maduracion\"
+                name="maduracion"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Maduración</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: 30 días\" {...field} />
+                      <Input placeholder="Ej: 30 días" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -450,12 +450,12 @@ export default function EditProductPage() {
               />
               <FormField
                 control={form.control}
-                name=\"grasa\"
+                name="grasa"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nivel de Grasa</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: Marmoleo A5\" {...field} />
+                      <Input placeholder="Ej: Marmoleo A5" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -463,15 +463,15 @@ export default function EditProductPage() {
               />
             </div>
 
-            <div className=\"grid grid-cols-1 md:grid-cols-2 gap-8\">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
-                name=\"pairing\"
+                name="pairing"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Maridaje</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: Malbec Reserva\" {...field} />
+                      <Input placeholder="Ej: Malbec Reserva" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -479,12 +479,12 @@ export default function EditProductPage() {
               />
               <FormField
                 control={form.control}
-                name=\"badge\"
+                name="badge"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Badge</FormLabel>
                     <FormControl>
-                      <Input placeholder=\"Ej: Premium\" {...field} />
+                      <Input placeholder="Ej: Premium" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -492,17 +492,17 @@ export default function EditProductPage() {
               />
             </div>
 
-            <div className=\"flex gap-4 pt-6\">
+            <div className="flex gap-4 pt-6">
               <Button
-                type=\"button\"
-                variant=\"outline\"
+                type="button"
+                variant="outline"
                 onClick={() => router.push('/admin/products')}
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
-              <Button type=\"submit\" disabled={isLoading} className=\"flex-1 md:flex-none\">
-                {isLoading && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}
+              <Button type="submit" disabled={isLoading} className="flex-1 md:flex-none">
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Cambios
               </Button>
             </div>

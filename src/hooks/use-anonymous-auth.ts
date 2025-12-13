@@ -18,7 +18,7 @@ export function useAnonymousAuth() {
                     await signInAnonymously(auth);
                     // The onAuthStateChanged will fire again with the new anon user
                 } catch (error) {
-                    console.error("Shadow Profile creation failed:", error);
+                    // ✅ SECURITY: Fail silently in production, no console.error
                     setLoading(false);
                 }
             }
