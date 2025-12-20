@@ -1,8 +1,7 @@
-'use client';
-
 // ✅ MANDATO-FILTRO: Forzar SSR en producción (evitar Admin Fantasma)
+// NOTA: Eliminamos 'revalidate = 0' porque causa conflictos en el build con 'use client'.
+// 'force-dynamic' es suficiente para que Vercel no guarde caché.
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -41,7 +40,7 @@ import { Search, Eye, FileText, User, CreditCard, Calendar, Tag, BarChart3 } fro
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RetentionDashboard } from '@/components/admin/RetentionDashboard';
 
-import { Order, OrderItem } from '@/schemas/order';
+import { Order } from '@/schemas/order';
 
 interface OrderWithId extends Order {
   id: string;
@@ -65,6 +64,7 @@ export default function OrdersPage() {
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/orders/list', {
         headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store' // Asegura que el fetch no use caché del navegador
       });
       if (!res.ok) throw new Error('Error fetching orders');
       const data = await res.json();
@@ -233,12 +233,12 @@ export default function OrdersPage() {
                     </TableRow>
                   ) : (
                     filteredOrders.map((order) => {
-                      // ✅ PASO 2: Semáforo de Pedidos Expirados
+                      // ✅ Semáforo de Pedidos Expirados
                       const now = new Date();
                       const orderDate = order.createdAt ? new Date(order.createdAt) : now;
                       const diffInHours = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
 
-                      // Lógica de color
+                      // Lógica de color para expirados (>1h en CREATED)
                       let rowClass = "hover:bg-muted/30 transition-colors border-b dark:border-white/5";
                       if (order.status === 'CREATED' && diffInHours > 1) {
                         rowClass = "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100 transition-colors border-b dark:border-white/5";
@@ -260,7 +260,7 @@ export default function OrdersPage() {
                             {formatPrice(order.total)}
                           </TableCell>
                           <TableCell>
-                            {/* ⚠️ Alerta de expiración */}
+                            {/* ⚠️ Alerta Visual de expiración */}
                             {order.status === 'CREATED' && diffInHours > 1 && (
                               <div className="text-xs font-bold text-red-600 flex items-center gap-1 mb-1 animate-pulse">
                                 ⚠️ EXPIRADO ({Math.floor(diffInHours)}h)
@@ -316,6 +316,35 @@ export default function OrdersPage() {
 
 function OrderDetailsModal({ order }: { order: OrderWithId }) {
   const { toast } = useToast();
+
+  const handleWhatsAppNotification = () => {
+    // 1. Limpieza del número: Quitar todo lo que no sea dígito
+    let rawPhone = order.customerInfo.customerPhone.replace(/\D/g, '');
+
+    // 2. Lógica inteligente para Colombia (Evitar doble 57)
+    // Si el usuario escribió "57300..." -> lo dejamos así.
+    // Si escribió "300..." -> le agregamos el 57.
+    let finalPhone = '';
+    if (rawPhone.startsWith('57') && rawPhone.length > 10) {
+      finalPhone = rawPhone;
+    } else {
+      finalPhone = `57${rawPhone}`;
+    }
+
+    const message = encodeURIComponent(
+      `*¡Hola ${order.customerInfo.customerName}!* 👋\n\n` +
+      `Tu pedido *#${order.id.slice(0, 8)}* en *El Buen Corte* ha sido recibido con éxito.\n\n` +
+      `*Resumen del Pedido:*\n` +
+      `${order.items.map(i => `- ${i.name} (${i.selectedWeight.toFixed(2)}kg)`).join('\n')}\n\n` +
+      `*Total:* ${formatPrice(order.total)}\n` +
+      `*Estado Actual:* ${order.status.toUpperCase()}\n\n` +
+      `¡Gracias por preferir nuestros cortes premium! 🥩✨`
+    );
+
+    // 3. Abrir link SIN símbolos extraños
+    window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -358,18 +387,7 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
                 <div className="pt-2">
                   <p className="text-sm font-medium mb-2">WhatsApp: {order.customerInfo.customerPhone}</p>
                   <Button
-                    onClick={() => {
-                      const message = encodeURIComponent(
-                        `*¡Hola ${order.customerInfo.customerName}!* 👋\n\n` +
-                        `Tu pedido *#${order.id.slice(0, 8)}* en *El Buen Corte* ha sido recibido con éxito.\n\n` +
-                        `*Resumen del Pedido:*\n` +
-                        `${order.items.map(i => `- ${i.name} (${i.selectedWeight.toFixed(2)}kg)`).join('\n')}\n\n` +
-                        `*Total:* ${formatPrice(order.total)}\n` +
-                        `*Estado Actual:* ${order.status.toUpperCase()}\n\n` +
-                        `¡Gracias por preferir nuestros cortes premium! 🥩✨`
-                      );
-                      window.open(`https://wa.me/57${order.customerInfo.customerPhone.replace(/\D/g, '')}?text=${message}`, '_blank');
-                    }}
+                    onClick={handleWhatsAppNotification}
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-xs gap-2 h-9"
                   >
                     <ShoppingBag className="w-4 h-4" /> Notificar por WhatsApp
@@ -501,3 +519,4 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
     </Dialog>
   );
 }
+```
