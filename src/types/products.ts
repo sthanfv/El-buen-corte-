@@ -18,17 +18,21 @@ export interface Product {
   badge: string;
   tags?: string[];
 
-  // ✅ MITIGACIÓN OPERATIVA (Peso Variable)
-  weightLabel?: string;     // Ej: "Aprox. 900g - 1.1kg"
+  // ✅ SOLUCIÓN AL DILEMA DEL CARNICERO: Peso Variable
+  isFixedPrice?: boolean;   // Si true, se vende por pieza a precio fijo
+  weightLabel?: string;     // Etiqueta visible (ej: "Aprox. 900g - 1.1kg")
   minWeight?: number;       // Peso mínimo garantizado en kg
-  isFixedPrice?: boolean;   // Si se cobra por pieza fija en lugar de gramaje exacto
-  basePrice?: number;       // Precio por pieza fija (si isFixedPrice es true)
+  maxWeight?: number;       // Peso máximo esperado en kg
+  averageWeight?: number;   // Peso promedio para cálculo
+  fixedPrice?: number;      // Precio fijo de la pieza (si isFixedPrice es true)
 
   createdAt?: Timestamp;
 }
 
 export interface OrderItem extends Product {
   orderId: string;
-  selectedWeight: number; // en kg (reemplaza 'weight')
-  finalPrice: number;     // precio calculado (reemplaza 'totalPrice')
+  selectedWeight: number; // en kg
+  finalPrice: number;     // precio calculado
+  weightLabel?: string;   // Etiqueta de peso seleccionada
 }
+

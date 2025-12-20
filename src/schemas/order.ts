@@ -53,6 +53,12 @@ export const CustomerInfoSchema = z.object({
   notes: z.string().max(500).regex(/^[a-zA-Z0-9\s.,!¡?¿\u00C0-\u017F]*$/, 'Notas contienen caracteres no permitidos').optional(),
   deliveryDate: z.string().optional(),
   deliveryTime: z.string().optional(),
+
+  // ✅ FACTURACIÓN ELECTRÓNICA (MANDATO-FILTRO - Cumplimiento Legal Colombia)
+  requiresInvoice: z.boolean().default(false).describe('Si requiere factura electrónica'),
+  invoiceNIT: z.string().min(9, 'NIT inválido').max(15).regex(/^[0-9-]+$/, 'NIT solo debe contener números y guiones').optional(),
+  invoiceCompanyName: z.string().min(3).max(200).optional(),
+  invoiceEmail: z.string().email('Email de facturación inválido').optional(),
 });
 
 export type CustomerInfo = z.infer<typeof CustomerInfoSchema>;

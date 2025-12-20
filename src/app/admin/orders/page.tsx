@@ -1,5 +1,9 @@
 'use client';
 
+// ✅ MANDATO-FILTRO: Forzar SSR en producción (evitar Admin Fantasma)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/firebase/client';
@@ -91,7 +95,7 @@ export default function OrdersPage() {
       }
 
       setOrders(prev =>
-        prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o))
+        prev.map(o => (o.id === orderId ? { ...o, status: newStatus as any } : o))
       );
       toast({ type: 'success', message: 'Estado actualizado correctamente.' });
     } catch (error: unknown) {
@@ -104,7 +108,7 @@ export default function OrdersPage() {
 
   const filteredOrders = orders.filter(order => {
     const searchLow = searchTerm.toLowerCase();
-    const customerName = (order.customerName || '').toLowerCase();
+    const customerName = (order.customerInfo?.customerName || '').toLowerCase();
     const orderId = (order.id || '').toLowerCase();
     const total = (order.total?.toString() || '');
     const status = (order.status || '').toLowerCase();
@@ -123,7 +127,7 @@ export default function OrdersPage() {
   const totalSales = orders.reduce((acc, order) => acc + order.total, 0);
   const totalOrders = orders.length;
   const thisMonthSales = orders
-    .filter((o) => new Date(o.createdAt).getMonth() === new Date().getMonth())
+    .filter((o) => o.createdAt && new Date(o.createdAt).getMonth() === new Date().getMonth())
     .reduce((acc, o) => acc + o.total, 0);
 
   return (
@@ -228,54 +232,73 @@ export default function OrdersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredOrders.map((order) => (
-                      <TableRow key={order.id} className="hover:bg-muted/30 transition-colors border-b dark:border-white/5">
-                        <TableCell className="font-semibold text-foreground py-4">
-                          {new Date(order.createdAt).toLocaleDateString('es-CO')}
-                          <div className="text-[10px] text-muted-foreground font-mono">#{order.id.slice(0, 8)}</div>
-                        </TableCell>
-                        <TableCell className="text-foreground/90 font-bold">
-                          {order.customerName || 'Invitado'}
-                        </TableCell>
-                        <TableCell className="capitalize text-muted-foreground text-xs">
-                          {order.paymentMethod === 'whatsapp' ? 'WhatsApp Pay' : order.paymentMethod}
-                        </TableCell>
-                        <TableCell className="font-black text-primary">
-                          {formatPrice(order.total)}
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={(order.status || 'CREATED').toUpperCase() === 'PENDING' ? 'PENDING_VERIFICATION' : (order.status || 'CREATED').toUpperCase()}
-                            onValueChange={(val) => handleStatusChange(order.id, val)}
-                            disabled={isUpdating === order.id}
-                          >
-                            <SelectTrigger className={cn(
-                              "w-[140px] font-bold h-8 border-none ring-offset-0 focus:ring-0",
-                              (order.status?.toUpperCase() === 'PENDING' || order.status?.toUpperCase() === 'PENDING_VERIFICATION') ? 'bg-orange-500/20 text-orange-600' :
-                                order.status?.toUpperCase() === 'CONFIRMED' ? 'bg-blue-500/20 text-blue-600' :
-                                  order.status?.toUpperCase() === 'DELIVERED' ? 'bg-green-500/20 text-green-600' :
-                                    order.status?.toUpperCase() === 'CREATED' ? 'bg-gray-500/20 text-gray-600' :
-                                      'bg-zinc-800 text-zinc-400'
-                            )}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CREATED">Creado</SelectItem>
-                              <SelectItem value="PENDING_VERIFICATION">Por Verificar</SelectItem>
-                              <SelectItem value="CONFIRMED">Confirmado</SelectItem>
-                              <SelectItem value="CUTTING">En Corte</SelectItem>
-                              <SelectItem value="PACKING">Empacando</SelectItem>
-                              <SelectItem value="ROUTING">En Ruta</SelectItem>
-                              <SelectItem value="DELIVERED">Entregado</SelectItem>
-                              <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <OrderDetailsModal order={order} />
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredOrders.map((order) => {
+                      // ✅ PASO 2: Semáforo de Pedidos Expirados
+                      const now = new Date();
+                      const orderDate = order.createdAt ? new Date(order.createdAt) : now;
+                      const diffInHours = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
+
+                      // Lógica de color
+                      let rowClass = "hover:bg-muted/30 transition-colors border-b dark:border-white/5";
+                      if (order.status === 'CREATED' && diffInHours > 1) {
+                        rowClass = "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100 transition-colors border-b dark:border-white/5";
+                      }
+
+                      return (
+                        <TableRow key={order.id} className={rowClass}>
+                          <TableCell className="font-semibold text-foreground py-4">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CO') : 'N/A'}
+                            <div className="text-[10px] text-muted-foreground font-mono">#{order.id.slice(0, 8)}</div>
+                          </TableCell>
+                          <TableCell className="text-foreground/90 font-bold">
+                            {order.customerInfo?.customerName || 'Invitado'}
+                          </TableCell>
+                          <TableCell className="capitalize text-muted-foreground text-xs">
+                            {order.paymentMethod}
+                          </TableCell>
+                          <TableCell className="font-black text-primary">
+                            {formatPrice(order.total)}
+                          </TableCell>
+                          <TableCell>
+                            {/* ⚠️ Alerta de expiración */}
+                            {order.status === 'CREATED' && diffInHours > 1 && (
+                              <div className="text-xs font-bold text-red-600 flex items-center gap-1 mb-1 animate-pulse">
+                                ⚠️ EXPIRADO ({Math.floor(diffInHours)}h)
+                              </div>
+                            )}
+                            <Select
+                              value={(order.status || 'CREATED').toUpperCase() === 'PENDING' ? 'PENDING_VERIFICATION' : (order.status || 'CREATED').toUpperCase()}
+                              onValueChange={(val) => handleStatusChange(order.id, val)}
+                              disabled={isUpdating === order.id}
+                            >
+                              <SelectTrigger className={cn(
+                                "w-[140px] font-bold h-8 border-none ring-offset-0 focus:ring-0",
+                                (order.status?.toUpperCase() === 'PENDING' || order.status?.toUpperCase() === 'PENDING_VERIFICATION') ? 'bg-orange-500/20 text-orange-600' :
+                                  order.status?.toUpperCase() === 'CONFIRMED' ? 'bg-blue-500/20 text-blue-600' :
+                                    order.status?.toUpperCase() === 'DELIVERED' ? 'bg-green-500/20 text-green-600' :
+                                      order.status?.toUpperCase() === 'CREATED' ? 'bg-gray-500/20 text-gray-600' :
+                                        'bg-zinc-800 text-zinc-400'
+                              )}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CREATED">Creado</SelectItem>
+                                <SelectItem value="PENDING_VERIFICATION">Por Verificar</SelectItem>
+                                <SelectItem value="CONFIRMED">Confirmado</SelectItem>
+                                <SelectItem value="CUTTING">En Corte</SelectItem>
+                                <SelectItem value="PACKING">Empacando</SelectItem>
+                                <SelectItem value="ROUTING">En Ruta</SelectItem>
+                                <SelectItem value="DELIVERED">Entregado</SelectItem>
+                                <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <OrderDetailsModal order={order} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   )}
                 </TableBody>
               </Table>
@@ -321,7 +344,7 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
               <p className="font-black text-lg">{order.customerInfo.customerName}</p>
               <p className="text-xs font-bold text-primary flex items-center gap-2">
                 <Calendar className="w-3.5 h-3.5" />
-                Realizado el: {new Date(order.createdAt).toLocaleString('es-CO', {
+                Realizado el: {order.createdAt ? new Date(order.createdAt).toLocaleString('es-CO', {
                   day: '2-digit',
                   month: '2-digit',
                   year: 'numeric',
@@ -329,7 +352,7 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
                   minute: '2-digit',
                   second: '2-digit',
                   hour12: true
-                })}
+                }) : 'N/A'}
               </p>
               {order.customerInfo.customerPhone && (
                 <div className="pt-2">
@@ -398,21 +421,20 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
                 <span className="text-sm font-medium">Estado del Pedido:</span>
                 <Badge className={cn(
                   "font-bold text-[10px] tracking-widest uppercase",
-                  (order.status === 'CREATED' || order.status === 'pending') ? 'bg-gray-500/20 text-gray-600' :
+                  order.status === 'CREATED' ? 'bg-gray-500/20 text-gray-600' :
                     order.status === 'PENDING_VERIFICATION' ? 'bg-orange-500/20 text-orange-600 animate-pulse' :
                       order.status === 'CONFIRMED' ? 'bg-blue-500/20 text-blue-600' :
                         order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-600' :
                           'bg-zinc-800 text-zinc-400'
                 )} variant="outline">
                   {order.status === 'CREATED' ? 'CREADO' :
-                    order.status === 'pending' ? 'PENDIENTE' :
-                      order.status === 'PENDING_VERIFICATION' ? 'POR VERIFICAR' :
-                        order.status === 'CONFIRMED' ? 'CONFIRMADO' :
-                          order.status === 'CUTTING' ? 'EN CORTE' :
-                            order.status === 'PACKING' ? 'EMPACANDO' :
-                              order.status === 'ROUTING' ? 'EN RUTA' :
-                                order.status === 'DELIVERED' ? 'ENTREGADO' :
-                                  order.status === 'CANCELLED' ? 'CANCELADO' : order.status}
+                    order.status === 'PENDING_VERIFICATION' ? 'POR VERIFICAR' :
+                      order.status === 'CONFIRMED' ? 'CONFIRMADO' :
+                        order.status === 'CUTTING' ? 'EN CORTE' :
+                          order.status === 'PACKING' ? 'EMPACANDO' :
+                            order.status === 'ROUTING' ? 'EN RUTA' :
+                              order.status === 'DELIVERED' ? 'ENTREGADO' :
+                                order.status === 'CANCELLED' ? 'CANCELADO' : order.status}
                 </Badge>
               </div>
             </div>
@@ -457,11 +479,11 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
                     <div>
                       <p className="font-bold text-sm italic uppercase tracking-tight">{item.name}</p>
                       <p className="text-[10px] text-muted-foreground font-medium">
-                        {(item.selectedWeight || item.weight || 0).toFixed(2)}kg x {formatPrice(item.pricePerKg)}/kg
+                        {item.selectedWeight.toFixed(2)}kg x {formatPrice(item.pricePerKg)}/kg
                       </p>
                     </div>
                     <span className="font-black text-sm text-primary italic">
-                      {formatPrice(item.finalPrice || item.totalPrice || 0)}
+                      {formatPrice(item.finalPrice)}
                     </span>
                   </div>
                 ))}

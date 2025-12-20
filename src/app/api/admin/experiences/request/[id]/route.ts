@@ -5,12 +5,12 @@ import { verifyAdmin } from '@/lib/auth-server';
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     if (!await verifyAdmin(request)) {
         return NextResponse.json({ error: 'Acceso denegado: Privilegios insuficientes' }, { status: 403 });
     }
-    const { id: ip } = params; // The ID is the IP
+    const { id: ip } = await params; // The ID is the IP
 
     let action = 'procesar';
     try {

@@ -60,6 +60,10 @@ export function OrderFormModal({ isOpen, onClose, order, total, onSuccess }: Pro
             notes: '',
             deliveryDate: '',
             deliveryTime: '',
+            requiresInvoice: false,
+            invoiceNIT: '',
+            invoiceCompanyName: '',
+            invoiceEmail: '',
         },
     });
 
@@ -137,40 +141,101 @@ export function OrderFormModal({ isOpen, onClose, order, total, onSuccess }: Pro
     };
 
     if (orderId) {
+        // ✅ MANDATO-FILTRO: CTA Psicológico para forzar cierre por WhatsApp
+        // ✅ CRÍTICO: Número SIN el + para compatibilidad móvil (iPhone/Android)
+        const cleanPhone = "573113114357"; // SIN símbolos
+        const orderRef = `#ORD-${orderId.slice(0, 8).toUpperCase()}`;
+        const message = `🥩 ¡Hola El Buen Corte!
+
+Acabo de hacer el pedido: *${orderRef}*
+Total a pagar: *${formatPrice(total)}*
+
+Quedo atento para enviar el comprobante de pago.`;
+
+        const whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+
         return (
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="sm:max-w-[500px] text-center p-12">
+                <DialogContent className="sm:max-w-[500px] text-center p-8">
                     <div className="flex flex-col items-center gap-6">
-                        <div className="bg-green-100 p-4 rounded-full">
+                        {/* Success Icon */}
+                        <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
                             <CheckCircle2 className="h-12 w-12 text-green-600" />
                         </div>
+
+                        {/* Title */}
                         <div className="space-y-2">
-                            <h2 className="text-2xl font-black">¡Pedido en Marcha!</h2>
-                            <p className="text-muted-foreground">
-                                Tu pedido <span className="font-mono font-bold text-primary">#{orderId.slice(0, 8).toUpperCase()}</span> ha sido registrado con éxito.
+                            <h2 className="text-3xl font-black text-foreground">¡Pedido Recibido!</h2>
+                            <p className="text-muted-foreground text-sm">
+                                Tu orden <span className="font-mono font-bold text-primary text-base">{orderRef}</span> ha sido reservada.
                             </p>
                         </div>
 
-                        <div className="bg-primary/5 p-4 rounded-lg w-full text-sm text-left border border-primary/10">
-                            <p className="font-semibold mb-1">¿Qué sigue?</p>
-                            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                                <li>Recibirás un correo de confirmación.</li>
-                                <li>Te contactaremos por WhatsApp para coordinar.</li>
-                                <li>Puedes ver el estado en tiempo real.</li>
-                            </ul>
+                        {/* Warning Box */}
+                        <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-xl w-full">
+                            <p className="text-sm font-bold text-orange-900 mb-2">
+                                ⚠️ Importante: Confirma tu pago
+                            </p>
+                            <p className="text-xs text-orange-700 leading-relaxed">
+                                Para confirmar el despacho, <strong>finaliza tu pago en WhatsApp</strong>.
+                                <br />
+                                Si no confirmas en <strong>1 hora</strong>, el sistema liberará el stock.
+                            </p>
                         </div>
 
-                        <div className="flex flex-col gap-3 w-full">
+                        {/* Botón Copiar Cuenta - PASO 4 */}
+                        <div className="bg-gray-100 p-4 rounded-lg w-full text-left">
+                            <p className="text-sm text-gray-600 mb-2">💳 Cuenta Bancolombia / Nequi:</p>
+                            <div className="flex justify-between items-center">
+                                <span className="font-mono font-bold text-lg">311 311 4357</span>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText("3113114357");
+                                        toast({ type: 'success', title: '¡Copiado!', message: 'Número de cuenta copiado al portapapeles' });
+                                    }}
+                                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded font-medium transition-colors"
+                                >
+                                    📋 Copiar
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">A nombre de: El Buen Corte</p>
+                        </div>
+
+                        {/* WhatsApp CTA - PRIMARY */}
+                        <a
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 px-6 rounded-xl shadow-2xl transform transition hover:scale-105 flex items-center justify-center gap-3 text-base uppercase tracking-wide"
+                        >
+                            <span className="text-2xl">📲</span>
+                            <span>Confirmar y Pagar por WhatsApp</span>
+                        </a>
+
+                        {/* Secondary Actions */}
+                        <div className="flex flex-col gap-2 w-full">
                             <Button
                                 onClick={() => window.open(`/api/orders/status/${orderId}`, '_blank')}
                                 variant="outline"
+                                size="sm"
+                                className="w-full"
                             >
                                 Ver Estado del Pedido
                             </Button>
-                            <Button onClick={onClose}>
+                            <Button
+                                onClick={onClose}
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-muted-foreground hover:text-foreground"
+                            >
                                 Volver a la Tienda
                             </Button>
                         </div>
+
+                        {/* Footer Note */}
+                        <p className="text-xs text-gray-400 mt-2">
+                            💡 Tip: Guarda el número {orderRef} para rastrear tu pedido
+                        </p>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -323,6 +388,81 @@ export function OrderFormModal({ isOpen, onClose, order, total, onSuccess }: Pro
                                 </FormItem>
                             )}
                         />
+
+                        {/* ✅ FACTURACIÓN ELECTRÓNICA (MANDATO-FILTRO) */}
+                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="requiresInvoice"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        <div className="space-y-1 leading-none">
+                                            <FormLabel className="text-sm font-bold text-purple-900">
+                                                📄 Requiero Factura Electrónica
+                                            </FormLabel>
+                                            <FormDescription className="text-xs text-purple-700">
+                                                Para empresas o personas jurídicas
+                                            </FormDescription>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {form.watch('requiresInvoice') && (
+                                <div className="space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
+                                    <FormField
+                                        control={form.control}
+                                        name="invoiceNIT"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-purple-900">NIT *</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="900123456-7" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="invoiceCompanyName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-purple-900">Razón Social *</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Mi Empresa S.A.S." {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="invoiceEmail"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-purple-900">Email de Facturación *</FormLabel>
+                                                <FormControl>
+                                                    <Input type="email" placeholder="facturacion@empresa.com" {...field} />
+                                                </FormControl>
+                                                <FormDescription className="text-xs">
+                                                    La factura electrónica será enviada a este correo
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+                        </div>
 
                         {/* Total Summary */}
                         <div className="bg-primary/5 p-4 rounded-lg border-2 border-primary/20">

@@ -111,7 +111,9 @@ export default function MeatProductCard({ product, onAddToCart }: Props) {
   }, [product.id]);
 
   const allImages = [...product.images, ...ugcImages];
-  const totalPrice = product.isFixedPrice ? (product.basePrice || 0) : (weight * product.pricePerKg);
+  const totalPrice = product.isFixedPrice
+    ? (product.fixedPrice || 0)
+    : (weight * product.pricePerKg);
   const estimatedServings = Math.max(
     1,
     Math.floor(weight / APP_CONFIG.boneInFactor)

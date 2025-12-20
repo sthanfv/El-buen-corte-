@@ -46,7 +46,7 @@ export function SalesBotV2() {
                 currentCategory: null,
                 viewedProducts: [],
                 cartItems: order,
-                totalCartValue: order.reduce((sum, item) => sum + (item.totalPrice || 0), 0),
+                totalCartValue: order.reduce((sum, item) => sum + item.finalPrice, 0),
                 isFirstVisit: !localStorage.getItem('bc_last_visit'),
                 previousProduct: null,
             };
@@ -64,7 +64,7 @@ export function SalesBotV2() {
         if (botEngine) {
             botEngine.updateContext({
                 cartItems: order,
-                totalCartValue: order.reduce((sum, item) => sum + (item.totalPrice || 0), 0),
+                totalCartValue: order.reduce((sum, item) => sum + item.finalPrice, 0),
             });
         }
     }, [order, botEngine]);
@@ -148,7 +148,7 @@ export function SalesBotV2() {
                     ...context.currentProduct,
                     quantity: 1,
                     weight: 1, // Default or previous selection
-                    totalPrice: context.currentProduct.pricePerKg
+                    finalPrice: context.currentProduct.pricePerKg
                 };
                 addToCart(orderItem);
                 setIsVisible(false);
@@ -181,7 +181,7 @@ export function SalesBotV2() {
                     ...product,
                     quantity: 1,
                     weight: 1,
-                    totalPrice: product.pricePerKg
+                    finalPrice: product.pricePerKg
                 };
                 addToCart(orderItem);
             };

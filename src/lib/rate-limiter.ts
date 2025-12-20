@@ -1,5 +1,5 @@
 import { db } from '@/firebase/client';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 
 interface RateLimitEntry {
     ipAddress: string;
@@ -96,7 +96,7 @@ export async function cleanupOldRateLimits(): Promise<void> {
 
         // Note: In production, use batch deletes for efficiency
         // For now, this is a simple implementation
-        const deletePromises = snapshot.docs.map((doc) => doc.ref.delete());
+        const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
         await Promise.all(deletePromises);
     } catch (error) {
         // ✅ SECURITY: Fail silently

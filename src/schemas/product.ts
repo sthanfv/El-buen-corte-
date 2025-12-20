@@ -25,6 +25,15 @@ export const ProductSchema = z.object({
   pairing: z.string().optional(),
   reviews: z.number().int().nonnegative().default(0),
   rating: z.number().min(0).max(5).default(5),
+  
+  // ✅ SOLUCIÓN AL DILEMA DEL CARNICERO: Peso Variable
+  isFixedPrice: z.boolean().default(false).describe('Si true, el producto se vende por pieza a precio fijo, no por kg'),
+  weightLabel: z.string().optional().describe('Etiqueta de peso visible (ej: "Aprox. 900g - 1.1kg")'),
+  minWeight: z.number().positive().optional().describe('Peso mínimo garantizado en kg'),
+  maxWeight: z.number().positive().optional().describe('Peso máximo esperado en kg'),
+  averageWeight: z.number().positive().optional().describe('Peso promedio usado para calcular precio fijo'),
+  fixedPrice: z.number().positive().optional().describe('Precio fijo de la pieza (calculado con margen de seguridad)'),
 });
 
 export type ProductInput = z.infer<typeof ProductSchema>;
+

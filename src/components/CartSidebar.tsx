@@ -33,6 +33,7 @@ export default function CartSidebar({
   const { order, removeFromCart, updateCartItem, clearCart } = useCart();
 
   const total = order.reduce((acc, item) => acc + item.finalPrice, 0);
+  const totalCartValue = order.reduce((sum, item) => sum + item.finalPrice, 0);
 
   // ✅ Update weight and recalculate price
   const updateWeight = (orderId: string, delta: number) => {
@@ -60,7 +61,7 @@ export default function CartSidebar({
 
   const handleOrderSuccess = () => {
     // Clear cart after successful order
-    setOrder([]);
+    clearCart();
     onClose();
     setShowOrderForm(false);
   };

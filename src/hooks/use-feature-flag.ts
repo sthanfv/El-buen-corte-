@@ -16,6 +16,7 @@ export function useFeatureFlag(flagName: string) {
 
         const fetchFlag = async () => {
             try {
+                if (!remoteConfig) return;
                 await fetchAndActivate(remoteConfig);
                 const val = getValue(remoteConfig, flagName);
                 setIsEnabled(val.asBoolean());

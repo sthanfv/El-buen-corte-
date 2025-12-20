@@ -1,4 +1,9 @@
 'use client';
+
+// ✅ MANDATO-FILTRO: Forzar SSR en producción (evitar Admin Fantasma)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';

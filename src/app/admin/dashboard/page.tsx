@@ -1,4 +1,9 @@
 'use client';
+
+// ✅ MANDATO-FILTRO: Forzar SSR en producción (evitar Admin Fantasma)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase/client'; // Corrected import
 import { useToast } from '@/hooks/use-toast';

@@ -131,7 +131,7 @@ export default function EditProductPage() {
           weightLabel: String(product.weightLabel || ''),
           minWeight: Number(product.minWeight) || 0,
           isFixedPrice: Boolean(product.isFixedPrice),
-          basePrice: Number(product.basePrice) || 0,
+          basePrice: Number(product.fixedPrice) || 0,
         });
 
         if (product.images && product.images.length > 0) {
