@@ -2,7 +2,7 @@
 
 // ✅ MANDATO-FILTRO: Forzar SSR en producción (evitar Admin Fantasma)
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Nota: revalidate no es compatible con 'use client', solo dynamic
 
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase/client'; // Corrected import

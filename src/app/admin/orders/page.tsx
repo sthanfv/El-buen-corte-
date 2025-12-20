@@ -298,7 +298,7 @@ export default function OrdersPage() {
                           </TableCell>
                         </TableRow>
                       );
-                    }))
+                    })
                   )}
                 </TableBody>
               </Table>
