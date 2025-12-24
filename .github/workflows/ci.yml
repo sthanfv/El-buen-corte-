@@ -24,6 +24,10 @@ jobs:
       FIREBASE_ADMIN_CLIENT_EMAIL: "mock@email.com"
       FIREBASE_ADMIN_PROJECT_ID: "mock-project"
       BLOB_READ_WRITE_TOKEN: "mock_token"
+      
+      # Mock Upstash Redis (Required for Middleware build)
+      UPSTASH_REDIS_REST_URL: "https://mock.upstash.io"
+      UPSTASH_REDIS_REST_TOKEN: "mock_token"
 
     steps:
     - uses: actions/checkout@v4
