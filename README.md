@@ -65,17 +65,15 @@ src/
 | Funcionalidad                        | Implementado | Notas                                                                         |
 | :----------------------------------- | :----------: | :---------------------------------------------------------------------------- |
 | **Login Admin**                      |  ✅ **Sí**   | Formulario funcional que autentica contra Firebase.                           |
-| **AdminGuard / Protección de rutas** |  ✅ **Sí**   | Protege las rutas bajo `/admin/*` verificando el `custom claim`.              |
+| **AdminGuard / Protección de rutas** |  ✅ **Sí**   | Protege las rutas bajo `/admin/*` verificando `custom claims`.                |
 | **Dashboard**                        |  ✅ **Sí**   | Página de bienvenida del admin con enlaces a otras secciones.                 |
 | **CRUD productos**                   |  ✅ **Sí**   | Endpoints de API para Crear, Leer, Actualizar y Eliminar productos.           |
-| **Integración con Firestore**        |  ✅ **Sí**   | Los endpoints de la API usan el SDK de Admin para operar en Firestore.        |
+| **Integración con Firestore**        |  ✅ **Sí**   | Backend y Frontend conectados 100% a Firestore (No Mock Data).                |
 | **Upload imágenes**                  |  ✅ **Sí**   | Endpoints de API para subir archivos a Vercel Blob y Cloudinary.              |
-| **Vercel Blob**                      |  ✅ **Sí**   | El endpoint `api/upload/blob` está implementado.                              |
-| **Cloudinary**                       |  ✅ **Sí**   | El endpoint `api/upload/cloudinary` está implementado.                        |
-| **Frontend público funcionando**     |  ✅ **Sí**   | El catálogo, carrito y flujo de pedido por WhatsApp son funcionales.          |
-| **Catálogo conectado a Firestore**   |  ❌ **No**   | El frontend público actualmente consume datos mock de `src/data/products.ts`. |
+| **Frontend público funcionando**     |  ✅ **Sí**   | Catálogo vivo, carrito y flujo de pedido por WhatsApp conectados a DB real.   |
+| **Facturación Electrónica**          |  ✅ **Sí**   | Soporte para datos de facturación (NIT, Razón Social) en el pedido.           |
 | **Toast System instalado**           |  ✅ **Sí**   | El sistema de notificaciones está instalado y se usa en la app.               |
-| **Variables .env configuradas**      |  ✅ **Sí**   | El archivo `.env` contiene las variables para Firebase y otros servicios.     |
+| **Seguridad Endurecida**             |  ✅ **Sí**   | Rate Limiting, Headers OWASP y Validación Zod activos.                        |
 
 ### 2.3. Código Clave Actual
 

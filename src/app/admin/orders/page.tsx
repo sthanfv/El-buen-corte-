@@ -1,7 +1,4 @@
-// ✅ MANDATO-FILTRO: Forzar SSR en producción (evitar Admin Fantasma)
-// NOTA: Eliminamos 'revalidate = 0' porque causa conflictos en el build con 'use client'.
-// 'force-dynamic' es suficiente para que Vercel no guarde caché.
-export const dynamic = 'force-dynamic';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +33,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Search, Eye, FileText, User, CreditCard, Calendar, Tag, BarChart3 } from 'lucide-react';
+import {
+  Search,
+  Eye,
+  FileText,
+  User,
+  CreditCard,
+  Calendar,
+  Tag,
+  BarChart3,
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RetentionDashboard } from '@/components/admin/RetentionDashboard';
 
@@ -64,7 +70,7 @@ export default function OrdersPage() {
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/orders/list', {
         headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store' // Asegura que el fetch no use caché del navegador
+        cache: 'no-store', // Asegura que el fetch no use caché del navegador
       });
       if (!res.ok) throw new Error('Error fetching orders');
       const data = await res.json();
@@ -94,25 +100,32 @@ export default function OrdersPage() {
         throw new Error(errorData.error || 'Failed to update status');
       }
 
-      setOrders(prev =>
-        prev.map(o => (o.id === orderId ? { ...o, status: newStatus as any } : o))
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, status: newStatus as any } : o
+        )
       );
       toast({ type: 'success', message: 'Estado actualizado correctamente.' });
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al actualizar el estado.';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Error al actualizar el estado.';
       toast({ type: 'error', message: errorMessage });
     } finally {
       setIsUpdating(null);
     }
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter((order) => {
     const searchLow = searchTerm.toLowerCase();
     const customerName = (order.customerInfo?.customerName || '').toLowerCase();
     const orderId = (order.id || '').toLowerCase();
-    const total = (order.total?.toString() || '');
+    const total = order.total?.toString() || '';
     const status = (order.status || '').toLowerCase();
-    const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CO').toLowerCase() : '';
+    const date = order.createdAt
+      ? new Date(order.createdAt).toLocaleDateString('es-CO').toLowerCase()
+      : '';
 
     return (
       customerName.includes(searchLow) ||
@@ -127,7 +140,11 @@ export default function OrdersPage() {
   const totalSales = orders.reduce((acc, order) => acc + order.total, 0);
   const totalOrders = orders.length;
   const thisMonthSales = orders
-    .filter((o) => o.createdAt && new Date(o.createdAt).getMonth() === new Date().getMonth())
+    .filter(
+      (o) =>
+        o.createdAt &&
+        new Date(o.createdAt).getMonth() === new Date().getMonth()
+    )
     .reduce((acc, o) => acc + o.total, 0);
 
   return (
@@ -135,10 +152,16 @@ export default function OrdersPage() {
       <div className="space-y-6 animate-in fade-in duration-500">
         <Tabs defaultValue="operational" className="w-full">
           <TabsList className="bg-secondary/50 p-1 rounded-xl mb-8">
-            <TabsTrigger value="operational" className="rounded-lg font-bold uppercase text-[10px] tracking-widest gap-2">
+            <TabsTrigger
+              value="operational"
+              className="rounded-lg font-bold uppercase text-[10px] tracking-widest gap-2"
+            >
               <ShoppingBag size={14} /> Gestión Operativa
             </TabsTrigger>
-            <TabsTrigger value="retention" className="rounded-lg font-bold uppercase text-[10px] tracking-widest gap-2">
+            <TabsTrigger
+              value="retention"
+              className="rounded-lg font-bold uppercase text-[10px] tracking-widest gap-2"
+            >
               <BarChart3 size={14} /> Analítica de Retención
             </TabsTrigger>
           </TabsList>
@@ -170,34 +193,50 @@ export default function OrdersPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Ventas Totales
+                  </CardTitle>
                   <DollarSign className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatPrice(totalSales)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Acumulado histórico</p>
+                  <div className="text-2xl font-bold">
+                    {formatPrice(totalSales)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Acumulado histórico
+                  </p>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pedidos Totales</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Pedidos Totales
+                  </CardTitle>
                   <ShoppingBag className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalOrders}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Transacciones procesadas</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Transacciones procesadas
+                  </p>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Este Mes</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Este Mes
+                  </CardTitle>
                   <TrendingUp className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatPrice(thisMonthSales)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Ventas del mes actual</p>
+                  <div className="text-2xl font-bold">
+                    {formatPrice(thisMonthSales)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ventas del mes actual
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -212,43 +251,67 @@ export default function OrdersPage() {
                     <TableHead className="font-bold">Método</TableHead>
                     <TableHead className="font-bold">Total</TableHead>
                     <TableHead className="font-bold">Estado</TableHead>
-                    <TableHead className="text-right font-bold">Acciones</TableHead>
+                    <TableHead className="text-right font-bold">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-48 text-center border-none">
+                      <TableCell
+                        colSpan={6}
+                        className="h-48 text-center border-none"
+                      >
                         <div className="flex flex-col items-center gap-3">
                           <Loader2 className="animate-spin h-8 w-8 text-primary" />
-                          <p className="text-muted-foreground font-medium">Cargando pedidos...</p>
+                          <p className="text-muted-foreground font-medium">
+                            Cargando pedidos...
+                          </p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-48 text-center border-none">
-                        <p className="text-muted-foreground font-medium">No se encontraron pedidos.</p>
+                      <TableCell
+                        colSpan={6}
+                        className="h-48 text-center border-none"
+                      >
+                        <p className="text-muted-foreground font-medium">
+                          No se encontraron pedidos.
+                        </p>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredOrders.map((order) => {
                       // ✅ Semáforo de Pedidos Expirados
                       const now = new Date();
-                      const orderDate = order.createdAt ? new Date(order.createdAt) : now;
-                      const diffInHours = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
+                      const orderDate = order.createdAt
+                        ? new Date(order.createdAt)
+                        : now;
+                      const diffInHours =
+                        (now.getTime() - orderDate.getTime()) /
+                        (1000 * 60 * 60);
 
                       // Lógica de color para expirados (>1h en CREATED)
-                      let rowClass = "hover:bg-muted/30 transition-colors border-b dark:border-white/5";
+                      let rowClass =
+                        'hover:bg-muted/30 transition-colors border-b dark:border-white/5';
                       if (order.status === 'CREATED' && diffInHours > 1) {
-                        rowClass = "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100 transition-colors border-b dark:border-white/5";
+                        rowClass =
+                          'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100 transition-colors border-b dark:border-white/5';
                       }
 
                       return (
                         <TableRow key={order.id} className={rowClass}>
                           <TableCell className="font-semibold text-foreground py-4">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CO') : 'N/A'}
-                            <div className="text-[10px] text-muted-foreground font-mono">#{order.id.slice(0, 8)}</div>
+                            {order.createdAt
+                              ? new Date(order.createdAt).toLocaleDateString(
+                                  'es-CO'
+                                )
+                              : 'N/A'}
+                            <div className="text-[10px] text-muted-foreground font-mono">
+                              #{order.id.slice(0, 8)}
+                            </div>
                           </TableCell>
                           <TableCell className="text-foreground/90 font-bold">
                             {order.customerInfo?.customerName || 'Invitado'}
@@ -267,29 +330,59 @@ export default function OrdersPage() {
                               </div>
                             )}
                             <Select
-                              value={(order.status || 'CREATED').toUpperCase() === 'PENDING' ? 'PENDING_VERIFICATION' : (order.status || 'CREATED').toUpperCase()}
-                              onValueChange={(val) => handleStatusChange(order.id, val)}
+                              value={
+                                (order.status || 'CREATED').toUpperCase() ===
+                                'PENDING'
+                                  ? 'PENDING_VERIFICATION'
+                                  : (order.status || 'CREATED').toUpperCase()
+                              }
+                              onValueChange={(val) =>
+                                handleStatusChange(order.id, val)
+                              }
                               disabled={isUpdating === order.id}
                             >
-                              <SelectTrigger className={cn(
-                                "w-[140px] font-bold h-8 border-none ring-offset-0 focus:ring-0",
-                                (order.status?.toUpperCase() === 'PENDING' || order.status?.toUpperCase() === 'PENDING_VERIFICATION') ? 'bg-orange-500/20 text-orange-600' :
-                                  order.status?.toUpperCase() === 'CONFIRMED' ? 'bg-blue-500/20 text-blue-600' :
-                                    order.status?.toUpperCase() === 'DELIVERED' ? 'bg-green-500/20 text-green-600' :
-                                      order.status?.toUpperCase() === 'CREATED' ? 'bg-gray-500/20 text-gray-600' :
-                                        'bg-zinc-800 text-zinc-400'
-                              )}>
+                              <SelectTrigger
+                                className={cn(
+                                  'w-[140px] font-bold h-8 border-none ring-offset-0 focus:ring-0',
+                                  order.status?.toUpperCase() === 'PENDING' ||
+                                    order.status?.toUpperCase() ===
+                                      'PENDING_VERIFICATION'
+                                    ? 'bg-orange-500/20 text-orange-600'
+                                    : order.status?.toUpperCase() ===
+                                        'CONFIRMED'
+                                      ? 'bg-blue-500/20 text-blue-600'
+                                      : order.status?.toUpperCase() ===
+                                          'DELIVERED'
+                                        ? 'bg-green-500/20 text-green-600'
+                                        : order.status?.toUpperCase() ===
+                                            'CREATED'
+                                          ? 'bg-gray-500/20 text-gray-600'
+                                          : 'bg-zinc-800 text-zinc-400'
+                                )}
+                              >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="CREATED">Creado</SelectItem>
-                                <SelectItem value="PENDING_VERIFICATION">Por Verificar</SelectItem>
-                                <SelectItem value="CONFIRMED">Confirmado</SelectItem>
-                                <SelectItem value="CUTTING">En Corte</SelectItem>
-                                <SelectItem value="PACKING">Empacando</SelectItem>
+                                <SelectItem value="PENDING_VERIFICATION">
+                                  Por Verificar
+                                </SelectItem>
+                                <SelectItem value="CONFIRMED">
+                                  Confirmado
+                                </SelectItem>
+                                <SelectItem value="CUTTING">
+                                  En Corte
+                                </SelectItem>
+                                <SelectItem value="PACKING">
+                                  Empacando
+                                </SelectItem>
                                 <SelectItem value="ROUTING">En Ruta</SelectItem>
-                                <SelectItem value="DELIVERED">Entregado</SelectItem>
-                                <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                                <SelectItem value="DELIVERED">
+                                  Entregado
+                                </SelectItem>
+                                <SelectItem value="CANCELLED">
+                                  Cancelado
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -333,12 +426,12 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
 
     const message = encodeURIComponent(
       `*¡Hola ${order.customerInfo.customerName}!* 👋\n\n` +
-      `Tu pedido *#${order.id.slice(0, 8)}* en *El Buen Corte* ha sido recibido con éxito.\n\n` +
-      `*Resumen del Pedido:*\n` +
-      `${order.items.map(i => `- ${i.name} (${i.selectedWeight.toFixed(2)}kg)`).join('\n')}\n\n` +
-      `*Total:* ${formatPrice(order.total)}\n` +
-      `*Estado Actual:* ${order.status.toUpperCase()}\n\n` +
-      `¡Gracias por preferir nuestros cortes premium! 🥩✨`
+        `Tu pedido *#${order.id.slice(0, 8)}* en *El Buen Corte* ha sido recibido con éxito.\n\n` +
+        `*Resumen del Pedido:*\n` +
+        `${order.items.map((i) => `- ${i.name} (${i.selectedWeight.toFixed(2)}kg)`).join('\n')}\n\n` +
+        `*Total:* ${formatPrice(order.total)}\n` +
+        `*Estado Actual:* ${order.status.toUpperCase()}\n\n` +
+        `¡Gracias por preferir nuestros cortes premium! 🥩✨`
     );
 
     // 3. Abrir link SIN símbolos extraños
@@ -348,7 +441,11 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 border-primary/20 hover:border-primary">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 border-primary/20 hover:border-primary"
+        >
           <Eye className="w-4 h-4" /> Ver Detalles
         </Button>
       </DialogTrigger>
@@ -370,22 +467,29 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
               <User className="w-4 h-4" /> Información del Cliente
             </h3>
             <div className="bg-muted/30 p-4 rounded-lg space-y-2 border border-black/5">
-              <p className="font-black text-lg">{order.customerInfo.customerName}</p>
+              <p className="font-black text-lg">
+                {order.customerInfo.customerName}
+              </p>
               <p className="text-xs font-bold text-primary flex items-center gap-2">
                 <Calendar className="w-3.5 h-3.5" />
-                Realizado el: {order.createdAt ? new Date(order.createdAt).toLocaleString('es-CO', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: true
-                }) : 'N/A'}
+                Realizado el:{' '}
+                {order.createdAt
+                  ? new Date(order.createdAt).toLocaleString('es-CO', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true,
+                    })
+                  : 'N/A'}
               </p>
               {order.customerInfo.customerPhone && (
                 <div className="pt-2">
-                  <p className="text-sm font-medium mb-2">WhatsApp: {order.customerInfo.customerPhone}</p>
+                  <p className="text-sm font-medium mb-2">
+                    WhatsApp: {order.customerInfo.customerPhone}
+                  </p>
                   <Button
                     onClick={handleWhatsAppNotification}
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-xs gap-2 h-9"
@@ -395,7 +499,9 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
                 </div>
               )}
               {order.customerInfo.customerAddress && (
-                <p className="text-sm text-muted-foreground mt-2">📍 {order.customerInfo.customerAddress}</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  📍 {order.customerInfo.customerAddress}
+                </p>
               )}
             </div>
 
@@ -405,29 +511,49 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
             <div className="bg-muted/30 p-4 rounded-lg space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Método Pago:</span>
-                <span className="font-bold capitalize text-primary">{order.paymentMethod}</span>
+                <span className="font-bold capitalize text-primary">
+                  {order.paymentMethod}
+                </span>
               </div>
 
               {/* ✅ CONCILIACIÓN FINANCIERA (MANDATO-FILTRO) */}
               <div className="space-y-2 pt-2 border-t border-white/5">
-                <label className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Código de Transacción / Comprobante</label>
+                <label className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">
+                  Código de Transacción / Comprobante
+                </label>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Ej: NEQ-123456"
                     className="h-8 text-xs font-mono"
                     defaultValue={order.transactionId || ''}
                     onBlur={async (e) => {
-                      if (e.target.value && e.target.value !== order.transactionId) {
+                      if (
+                        e.target.value &&
+                        e.target.value !== order.transactionId
+                      ) {
                         try {
                           const token = await auth.currentUser?.getIdToken();
                           const res = await fetch('/api/orders/update', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ id: order.id, updates: { transactionId: e.target.value } }),
+                            headers: {
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              id: order.id,
+                              updates: { transactionId: e.target.value },
+                            }),
                           });
-                          if (res.ok) toast({ type: 'success', message: 'Código de transacción guardado.' });
+                          if (res.ok)
+                            toast({
+                              type: 'success',
+                              message: 'Código de transacción guardado.',
+                            });
                         } catch (err) {
-                          toast({ type: 'error', message: 'Error al guardar el código.' });
+                          toast({
+                            type: 'error',
+                            message: 'Error al guardar el código.',
+                          });
                         }
                       }
                     }}
@@ -437,22 +563,38 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
 
               <div className="flex justify-between items-center pt-2 border-t border-white/5">
                 <span className="text-sm font-medium">Estado del Pedido:</span>
-                <Badge className={cn(
-                  "font-bold text-[10px] tracking-widest uppercase",
-                  order.status === 'CREATED' ? 'bg-gray-500/20 text-gray-600' :
-                    order.status === 'PENDING_VERIFICATION' ? 'bg-orange-500/20 text-orange-600 animate-pulse' :
-                      order.status === 'CONFIRMED' ? 'bg-blue-500/20 text-blue-600' :
-                        order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-600' :
-                          'bg-zinc-800 text-zinc-400'
-                )} variant="outline">
-                  {order.status === 'CREATED' ? 'CREADO' :
-                    order.status === 'PENDING_VERIFICATION' ? 'POR VERIFICAR' :
-                      order.status === 'CONFIRMED' ? 'CONFIRMADO' :
-                        order.status === 'CUTTING' ? 'EN CORTE' :
-                          order.status === 'PACKING' ? 'EMPACANDO' :
-                            order.status === 'ROUTING' ? 'EN RUTA' :
-                              order.status === 'DELIVERED' ? 'ENTREGADO' :
-                                order.status === 'CANCELLED' ? 'CANCELADO' : order.status}
+                <Badge
+                  className={cn(
+                    'font-bold text-[10px] tracking-widest uppercase',
+                    order.status === 'CREATED'
+                      ? 'bg-gray-500/20 text-gray-600'
+                      : order.status === 'PENDING_VERIFICATION'
+                        ? 'bg-orange-500/20 text-orange-600 animate-pulse'
+                        : order.status === 'CONFIRMED'
+                          ? 'bg-blue-500/20 text-blue-600'
+                          : order.status === 'DELIVERED'
+                            ? 'bg-green-500/20 text-green-600'
+                            : 'bg-zinc-800 text-zinc-400'
+                  )}
+                  variant="outline"
+                >
+                  {order.status === 'CREATED'
+                    ? 'CREADO'
+                    : order.status === 'PENDING_VERIFICATION'
+                      ? 'POR VERIFICAR'
+                      : order.status === 'CONFIRMED'
+                        ? 'CONFIRMADO'
+                        : order.status === 'CUTTING'
+                          ? 'EN CORTE'
+                          : order.status === 'PACKING'
+                            ? 'EMPACANDO'
+                            : order.status === 'ROUTING'
+                              ? 'EN RUTA'
+                              : order.status === 'DELIVERED'
+                                ? 'ENTREGADO'
+                                : order.status === 'CANCELLED'
+                                  ? 'CANCELADO'
+                                  : order.status}
                 </Badge>
               </div>
             </div>
@@ -462,25 +604,42 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
               <BarChart3 className="w-4 h-4" /> Línea de Tiempo (Observabilidad)
             </h3>
             <div className="bg-muted/10 border border-white/5 p-4 rounded-lg space-y-4 max-h-[200px] overflow-y-auto">
-              {order.history && order.history.length > 0 ? order.history.map((h, i: number) => {
-                const isDelayed = h.status === 'CUTTING' && (h.durationMs || 0) > 20 * 60 * 1000; // Alerta > 20 min
-                return (
-                  <div key={i} className="flex gap-3 relative pb-2 border-l-2 border-primary/20 ml-2 pl-4">
-                    <div className={cn(
-                      "absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-950",
-                      isDelayed ? "bg-red-500 animate-ping" : "bg-primary"
-                    )} />
-                    <div>
-                      <p className="text-[10px] font-black uppercase text-foreground">{h.status}</p>
-                      <p className="text-[9px] text-muted-foreground">{new Date(h.timestamp).toLocaleString()}</p>
-                      {isDelayed && (
-                        <p className="text-[9px] text-red-500 font-bold mt-1">⚠️ BANDERA ROJA: Retraso detectado en producción</p>
-                      )}
+              {order.history && order.history.length > 0 ? (
+                order.history.map((h, i: number) => {
+                  const isDelayed =
+                    h.status === 'CUTTING' &&
+                    (h.durationMs || 0) > 20 * 60 * 1000; // Alerta > 20 min
+                  return (
+                    <div
+                      key={i}
+                      className="flex gap-3 relative pb-2 border-l-2 border-primary/20 ml-2 pl-4"
+                    >
+                      <div
+                        className={cn(
+                          'absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-950',
+                          isDelayed ? 'bg-red-500 animate-ping' : 'bg-primary'
+                        )}
+                      />
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-foreground">
+                          {h.status}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {new Date(h.timestamp).toLocaleString()}
+                        </p>
+                        {isDelayed && (
+                          <p className="text-[9px] text-red-500 font-bold mt-1">
+                            ⚠️ BANDERA ROJA: Retraso detectado en producción
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              }) : (
-                <p className="text-xs text-muted-foreground italic text-center">Iniciando trazabilidad...</p>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-muted-foreground italic text-center">
+                  Iniciando trazabilidad...
+                </p>
               )}
             </div>
           </div>
@@ -493,11 +652,17 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
             <div className="bg-muted/20 border border-white/5 rounded-lg overflow-hidden">
               <div className="max-h-[300px] overflow-y-auto">
                 {order.items?.map((item, idx) => (
-                  <div key={idx} className="p-3 border-b border-white/5 flex justify-between items-center hover:bg-muted/10">
+                  <div
+                    key={idx}
+                    className="p-3 border-b border-white/5 flex justify-between items-center hover:bg-muted/10"
+                  >
                     <div>
-                      <p className="font-bold text-sm italic uppercase tracking-tight">{item.name}</p>
+                      <p className="font-bold text-sm italic uppercase tracking-tight">
+                        {item.name}
+                      </p>
                       <p className="text-[10px] text-muted-foreground font-medium">
-                        {item.selectedWeight.toFixed(2)}kg x {formatPrice(item.pricePerKg)}/kg
+                        {item.selectedWeight.toFixed(2)}kg x{' '}
+                        {formatPrice(item.pricePerKg)}/kg
                       </p>
                     </div>
                     <span className="font-black text-sm text-primary italic">
@@ -519,4 +684,3 @@ function OrderDetailsModal({ order }: { order: OrderWithId }) {
     </Dialog>
   );
 }
-```

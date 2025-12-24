@@ -5,11 +5,11 @@ service cloud.firestore {
     
     // --- FUNCIONES AUXILIARES ---
     
-    // Verificar si es administrador (Email corporativo o específico)
+    // Verificar si es administrador (Usando Custom Claims)
     function isAdmin() {
       return request.auth != null && (
-        request.auth.token.email.matches('.*@buencorte[.]co') || 
-        request.auth.token.email == 'fv9316@gmail.com'
+        request.auth.token.admin == true || 
+        request.auth.token.email.matches('.*@buencorte[.]co')
       );
     }
     

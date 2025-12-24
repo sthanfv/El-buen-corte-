@@ -3,15 +3,34 @@ require('dotenv').config();
 
 const admin = require('firebase-admin');
 
-// Construye el objeto de credenciales desde las variables de entorno
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  // Reemplaza los \\n en la clave privada por saltos de línea reales
-  privateKey: process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    : undefined,
-};
+// Construye el objeto de credenciales
+let serviceAccount;
+
+if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON) {
+  try {
+    serviceAccount = JSON.parse(
+      process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON
+    );
+  } catch (e) {
+    console.error('Error parseando FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON', e);
+    process.exit(1);
+  }
+} else {
+  serviceAccount = {
+    projectId:
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.FIREBASE_ADMIN_PROJECT_ID ||
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    clientEmail:
+      process.env.FIREBASE_CLIENT_EMAIL ||
+      process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+    privateKey: (
+      process.env.FIREBASE_PRIVATE_KEY ||
+      process.env.FIREBASE_ADMIN_PRIVATE_KEY ||
+      ''
+    ).replace(/\\n/g, '\n'),
+  };
+}
 
 // Verifica que todas las variables necesarias estén presentes
 if (
@@ -21,7 +40,7 @@ if (
 ) {
   console.error(
     '\x1b[31m%s\x1b[0m',
-    'Error: Faltan variables de entorno para la cuenta de servicio de Firebase.'
+    'Error: Faltan variables de entorno. Se intentó buscar FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON o (FIREBASE_ADMIN_PROJECT_ID + Email + Key).'
   );
   console.log(
     'Asegúrate de que FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, y FIREBASE_PRIVATE_KEY estén en tu archivo .env'
@@ -34,11 +53,12 @@ try {
     credential: admin.credential.cert(serviceAccount),
   });
 
-  const uid = process.env.NEXT_PUBLIC_ADMIN_UID;
+  // Probar obtener UID de argumentos (prioridad 1) o variable de entorno (prioridad 2)
+  const uid = process.argv[2] || process.env.NEXT_PUBLIC_ADMIN_UID;
 
   if (!uid) {
     throw new Error(
-      'La variable de entorno NEXT_PUBLIC_ADMIN_UID no está definida.'
+      'Debes proporcionar un UID. Ejemplo: node src/setAdmin.js <TU_UID_AQUI>'
     );
   }
 
