@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import Fuse from 'fuse.js';
 import { Product, OrderItem } from '@/types/products';
 import MeatProductCard from '@/components/MeatProductCard';
-import OrderSidebar from '@/components/CartSidebar';
+
+const OrderSidebar = dynamic(() => import('@/components/CartSidebar'), {
+  ssr: false,
+});
+
 import { useCart } from '@/components/cart-provider';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
@@ -31,7 +36,13 @@ export default function Home() {
   const [visibleItems, setVisibleItems] = useState(9); // Inicialmente mostrar 9 productos
 
   // Global Cart State
-  const { order, addToCart, removeFromCart: removeContext, isCartOpen, setIsCartOpen } = useCart();
+  const {
+    order,
+    addToCart,
+    removeFromCart: removeContext,
+    isCartOpen,
+    setIsCartOpen,
+  } = useCart();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
@@ -47,12 +58,14 @@ export default function Home() {
 
         // ✅ ENRIQUECIMIENTO SEMÁNTICO (MANDATO-FILTRO)
         // Inyectamos tags tácticos para potenciar el Fuzzy Search
-        const enrichedProducts = data.map(p => {
+        const enrichedProducts = data.map((p) => {
           const lowerName = p.name.toLowerCase();
           let tags: string[] = [];
           if (lowerName.includes('tomahawk')) tags = PRODUCT_TAGS.tomahawk;
-          else if (lowerName.includes('puyazo') || lowerName.includes('pica')) tags = PRODUCT_TAGS.puyazo;
-          else if (lowerName.includes('lomo') || lowerName.includes('baby')) tags = PRODUCT_TAGS.lomito;
+          else if (lowerName.includes('puyazo') || lowerName.includes('pica'))
+            tags = PRODUCT_TAGS.puyazo;
+          else if (lowerName.includes('lomo') || lowerName.includes('baby'))
+            tags = PRODUCT_TAGS.lomito;
           else if (lowerName.includes('costilla')) tags = PRODUCT_TAGS.costilla;
           else if (lowerName.includes('chorizo')) tags = PRODUCT_TAGS.chorizo;
 
@@ -83,20 +96,22 @@ export default function Home() {
           { name: 'name', weight: 0.7 },
           { name: 'category', weight: 0.3 },
           { name: 'tags', weight: 0.5 },
-          { name: 'badge', weight: 0.2 }
+          { name: 'badge', weight: 0.2 },
         ],
         threshold: 0.4, // Tolerancia al error ortográfico
         includeScore: true,
       });
 
       const results = fuse.search(searchTerm);
-      filtered = results.map(r => r.item);
+      filtered = results.map((r) => r.item);
     }
 
     return filtered;
   }, [products, searchTerm, activeCategory]);
 
-  const addToOrder = (item: Product & { selectedWeight: number; finalPrice: number }) => {
+  const addToOrder = (
+    item: Product & { selectedWeight: number; finalPrice: number }
+  ) => {
     const newItem: OrderItem = { ...item, orderId: Date.now().toString() };
     addToCart(newItem); // Use Global Action
     toast({
@@ -107,7 +122,7 @@ export default function Home() {
   };
 
   const removeFromOrder = (id: string) => {
-    // Current Context uses index, but Sidebar uses ID. 
+    // Current Context uses index, but Sidebar uses ID.
     // Need to find index or update Context to remove by ID.
     // For now, let's find index by orderId
     const index = order.findIndex((item) => item.orderId === id);
@@ -184,7 +199,7 @@ export default function Home() {
               {visibleItems < filteredProducts.length && (
                 <div className="flex justify-center mt-12 pb-10">
                   <Button
-                    onClick={() => setVisibleItems(prev => prev + 9)}
+                    onClick={() => setVisibleItems((prev) => prev + 9)}
                     variant="outline"
                     className="group border-primary text-primary hover:bg-primary hover:text-white px-10 h-14 font-black italic uppercase rounded-none transition-all duration-300"
                   >
@@ -199,10 +214,7 @@ export default function Home() {
       </main>
       <TrustSection />
       <Footer />
-      <OrderSidebar
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-      />
+      <OrderSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );
 }

@@ -218,12 +218,12 @@ Quedo atento para enviar el comprobante de pago.`;
             </div>
 
             {/* Botón Copiar Cuenta - PASO 4 */}
-            <div className="bg-gray-100 p-4 rounded-lg w-full text-left">
-              <p className="text-sm text-gray-600 mb-2">
+            <div className="bg-gray-100 p-4 rounded-lg w-full text-left border border-gray-200">
+              <p className="text-sm text-gray-700 mb-2 font-medium">
                 💳 Cuenta Bancolombia / Nequi:
               </p>
               <div className="flex justify-between items-center">
-                <span className="font-mono font-bold text-lg">
+                <span className="font-mono font-bold text-lg text-zinc-950">
                   311 311 4357
                 </span>
                 <button
@@ -235,12 +235,12 @@ Quedo atento para enviar el comprobante de pago.`;
                       message: 'Número de cuenta copiado al portapapeles',
                     });
                   }}
-                  className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded font-medium transition-colors"
+                  className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded font-bold transition-colors shadow-sm"
                 >
                   📋 Copiar
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm text-gray-600 mt-2 font-medium">
                 A nombre de: El Buen Corte
               </p>
             </div>
@@ -250,7 +250,7 @@ Quedo atento para enviar el comprobante de pago.`;
               href={whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 px-6 rounded-xl shadow-2xl transform transition hover:scale-105 flex items-center justify-center gap-3 text-base uppercase tracking-wide"
+              className="w-full bg-green-700 hover:bg-green-800 text-white font-black py-5 px-6 rounded-xl shadow-2xl transform transition hover:scale-105 flex items-center justify-center gap-3 text-base uppercase tracking-wide"
             >
               <span className="text-2xl">📲</span>
               <span>Confirmar y Pagar por WhatsApp</span>
@@ -264,7 +264,7 @@ Quedo atento para enviar el comprobante de pago.`;
                 }
                 variant="outline"
                 size="sm"
-                className="w-full"
+                className="w-full font-bold border-gray-300"
               >
                 Ver Estado del Pedido
               </Button>
@@ -272,14 +272,14 @@ Quedo atento para enviar el comprobante de pago.`;
                 onClick={onClose}
                 variant="ghost"
                 size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="text-sm text-gray-700 hover:text-zinc-950 font-medium"
               >
                 Volver a la Tienda
               </Button>
             </div>
 
             {/* Footer Note */}
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-sm text-gray-600 mt-2 font-medium">
               💡 Tip: Guarda el número {orderRef} para rastrear tu pedido
             </p>
           </div>

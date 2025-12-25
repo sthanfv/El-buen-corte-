@@ -18,7 +18,7 @@ export default function Footer() {
 
   if (loading) {
     return (
-      <footer className="bg-secondary/20 text-white pt-10 pb-10 border-t border-white/5 text-center">
+      <footer className="bg-zinc-950 text-white pt-10 pb-10 border-t border-white/5 text-center">
         <Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" />
       </footer>
     );
@@ -37,7 +37,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-secondary/20 text-white pt-20 pb-10 border-t border-white/5">
+    <footer className="bg-zinc-950 text-white pt-20 pb-10 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center gap-2 mb-6">
@@ -89,7 +89,10 @@ export default function Footer() {
           <h4 className="font-bold text-lg mb-6 text-foreground">Navegación</h4>
           <ul className="space-y-3">
             <li>
-              <Link href="/blog" className="text-muted-foreground hover:text-primary transition-colors block">
+              <Link
+                href="/blog"
+                className="text-muted-foreground hover:text-primary transition-colors block"
+              >
                 Blog & Experiencias
               </Link>
             </li>
@@ -112,12 +115,18 @@ export default function Footer() {
           <h4 className="font-bold text-lg mb-6 text-foreground">Legal</h4>
           <ul className="space-y-3">
             <li>
-              <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors block">
+              <Link
+                href="/privacy"
+                className="text-muted-foreground hover:text-primary transition-colors block"
+              >
                 Política de Privacidad
               </Link>
             </li>
             <li>
-              <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors block">
+              <Link
+                href="/terms"
+                className="text-muted-foreground hover:text-primary transition-colors block"
+              >
                 Términos del Servicio
               </Link>
             </li>
@@ -142,7 +151,10 @@ export default function Footer() {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 pt-8 border-t border-white/10 flex justify-center items-center text-xs text-muted-foreground font-medium">
-        <p>© {new Date().getFullYear()} BuenCorte S.A.S. Todos los derechos reservados.</p>
+        <p>
+          © {new Date().getFullYear()} BuenCorte S.A.S. Todos los derechos
+          reservados.
+        </p>
       </div>
     </footer>
   );

@@ -1,24 +1,25 @@
 import { sendOrderConfirmation, OrderEmailData } from '../src/lib/email';
-import { Resend } from 'resend';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 // Mock Resend
-jest.mock('resend', () => {
+vi.mock('resend', () => {
   return {
-    Resend: jest.fn().mockImplementation(() => ({
-      emails: {
-        send: jest
+    Resend: vi.fn().mockImplementation(function (this: any) {
+      this.emails = {
+        send: vi
           .fn()
           .mockResolvedValue({ data: { id: 'mock_id' }, error: null }),
-      },
-    })),
+      };
+    }),
   };
 });
+
 // Mock Logger to avoid Firebase init
-jest.mock('@/lib/logger', () => ({
+vi.mock('@/lib/logger', () => ({
   logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -31,11 +32,10 @@ describe('Email Service', () => {
     items: [{ name: 'Tomahawk', quantity: 1, price: 50000 }],
   };
 
-  const originalEnv = process.env;
+  const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    process.env = { ...originalEnv };
+    vi.clearAllMocks();
   });
 
   afterAll(() => {
@@ -43,24 +43,24 @@ describe('Email Service', () => {
   });
 
   it('should return mock success if RESEND_API_KEY is missing', async () => {
-    delete process.env.RESEND_API_KEY;
-    console.warn = jest.fn(); // Suppress warn
-    console.log = jest.fn(); // Suppress log
+    vi.stubEnv('RESEND_API_KEY', '');
+    console.warn = vi.fn(); // Suppress warn
+    console.log = vi.fn(); // Suppress log
 
     const result = await sendOrderConfirmation(mockOrderData);
 
     expect(result.success).toBe(true);
     expect(result.mock).toBe(true);
+    vi.unstubAllEnvs();
   });
 
   it('should attempt to send email if RESEND_API_KEY is present', async () => {
-    process.env.RESEND_API_KEY = 're_123';
+    vi.stubEnv('RESEND_API_KEY', 're_123');
 
     // We assume the mock implementation set above works
     const result = await sendOrderConfirmation(mockOrderData);
 
     expect(result.success).toBe(true);
-    // Note: We'd verify resend.emails.send() was called if we exported the instance,
-    // but since it's internal to the module, we rely on the mocked return value.
+    vi.unstubAllEnvs();
   });
 });

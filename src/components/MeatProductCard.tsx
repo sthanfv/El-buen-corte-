@@ -1,5 +1,4 @@
-'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import Image from 'next/image';
 import {
   ShoppingBag,
@@ -58,7 +57,10 @@ export interface CartItem extends Product {
   finalPrice: number;
 }
 
-export default function MeatProductCard({ product, onAddToCart }: Props) {
+const MeatProductCard = memo(function MeatProductCard({
+  product,
+  onAddToCart,
+}: Props) {
   const [weight, setWeight] = useState(1.0);
   const [isLiked, setIsLiked] = useState(false);
   const [doneness, setDoneness] = useState<keyof typeof COOKING_TEMPS>('medio');
@@ -424,6 +426,8 @@ export default function MeatProductCard({ product, onAddToCart }: Props) {
                   aria-valuenow={weight}
                   aria-valuemin={APP_CONFIG.minWeightPerItem}
                   aria-valuemax={APP_CONFIG.maxWeightPerItem}
+                  aria-orientation="horizontal"
+                  aria-valuetext={`${weight} kilogramos`}
                   onKeyDown={(e) => {
                     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
                       e.preventDefault();
@@ -642,4 +646,6 @@ export default function MeatProductCard({ product, onAddToCart }: Props) {
       </SheetContent>
     </Sheet>
   );
-}
+});
+
+export default MeatProductCard;

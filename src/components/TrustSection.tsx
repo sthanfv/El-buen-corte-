@@ -3,7 +3,7 @@ import { ShieldCheck, Thermometer, ChefHat } from 'lucide-react';
 
 export default function TrustSection() {
   return (
-    <section className="bg-secondary/20 text-white py-20">
+    <section className="bg-zinc-900 text-white py-20">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
           {/* Calidad Certificada */}

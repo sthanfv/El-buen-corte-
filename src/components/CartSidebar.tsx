@@ -14,20 +14,21 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { Separator } from './ui/separator';
-import { OrderFormModal } from './OrderFormModal';
+import dynamic from 'next/dynamic';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/cart-provider';
 
+const OrderFormModal = dynamic(
+  () => import('./OrderFormModal').then((mod) => mod.OrderFormModal),
+  { ssr: false }
+);
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function CartSidebar({
-  isOpen,
-  onClose,
-}: Props) {
+export default function CartSidebar({ isOpen, onClose }: Props) {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const { toast } = useToast();
   const { order, removeFromCart, updateCartItem, clearCart } = useCart();
@@ -37,7 +38,7 @@ export default function CartSidebar({
 
   // ✅ Update weight and recalculate price
   const updateWeight = (orderId: string, delta: number) => {
-    const item = order.find(i => i.orderId === orderId);
+    const item = order.find((i) => i.orderId === orderId);
     if (!item) return;
 
     const newWeight = Math.max(0.1, Math.min(50, item.selectedWeight + delta));
@@ -88,11 +89,18 @@ export default function CartSidebar({
             {order.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center gap-6 py-12">
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-8">
-                  <ShoppingBag className="h-24 w-24 text-gray-400" strokeWidth={1.5} />
+                  <ShoppingBag
+                    className="h-24 w-24 text-gray-400"
+                    strokeWidth={1.5}
+                  />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Tu carrito está vacío</h3>
-                  <p className="text-muted-foreground">Agrega productos para comenzar tu pedido</p>
+                  <h3 className="text-xl font-bold mb-2">
+                    Tu carrito está vacío
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Agrega productos para comenzar tu pedido
+                  </p>
                 </div>
                 <SheetClose asChild>
                   <Button onClick={onClose} size="lg" className="mt-4">
@@ -125,7 +133,8 @@ export default function CartSidebar({
                         {item.name}
                       </h4>
                       <p className="text-sm text-muted-foreground mb-3">
-                        ${item.pricePerKg.toLocaleString('es-CO')}/kg • {item.category}
+                        ${item.pricePerKg.toLocaleString('es-CO')}/kg •{' '}
+                        {item.category}
                       </p>
 
                       {/* Weight Controls */}
@@ -144,7 +153,9 @@ export default function CartSidebar({
                           <span className="font-bold text-lg">
                             {item.selectedWeight.toFixed(1)}
                           </span>
-                          <span className="text-sm text-muted-foreground ml-1">kg</span>
+                          <span className="text-sm text-muted-foreground ml-1">
+                            kg
+                          </span>
                         </div>
 
                         <Button
@@ -168,7 +179,9 @@ export default function CartSidebar({
                           size="sm"
                           className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                           onClick={() => {
-                            const idx = order.findIndex(i => i.orderId === item.orderId);
+                            const idx = order.findIndex(
+                              (i) => i.orderId === item.orderId
+                            );
                             if (idx !== -1) removeFromCart(idx);
                           }}
                         >

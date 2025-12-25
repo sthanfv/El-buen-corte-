@@ -1,30 +1,31 @@
 /**
- * @jest-environment jsdom
+ * @vitest-environment jsdom
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useActivityTracker } from '@/hooks/use-activity-tracker';
 import { addDoc } from 'firebase/firestore';
+import { describe, it, expect, vi, beforeEach, test } from 'vitest';
 
 // Mock dependencies
-jest.mock('firebase/firestore');
-jest.mock('@/firebase/client', () => ({
+vi.mock('firebase/firestore');
+vi.mock('@/firebase/client', () => ({
   db: {},
 }));
-jest.mock('@/hooks/use-anonymous-auth', () => ({
+vi.mock('@/hooks/use-anonymous-auth', () => ({
   useAnonymousAuth: () => ({
     user: { uid: 'test-user-123', isAnonymous: true },
     loading: false,
   }),
 }));
-jest.mock('next/navigation', () => ({
+vi.mock('next/navigation', () => ({
   usePathname: () => '/test-page',
 }));
 
 describe.skip('useActivityTracker', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (addDoc as jest.Mock).mockResolvedValue({ id: 'doc-id' });
+    vi.clearAllMocks();
+    (addDoc as any).mockResolvedValue({ id: 'doc-id' });
   });
 
   test('should export logEvent function', () => {
@@ -51,48 +52,48 @@ describe.skip('useActivityTracker', () => {
   });
 
   test('should track dwell time on unmount if > 15s', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     const { unmount } = renderHook(() => useActivityTracker());
 
     // Fast-forward 20 seconds
     act(() => {
-      jest.advanceTimersByTime(20000);
+      vi.advanceTimersByTime(20000);
     });
 
     unmount();
 
     await waitFor(() => {
-      const dwellCall = (addDoc as jest.Mock).mock.calls.find(
-        (call) => call[1]?.type === 'dwell_high'
+      const dwellCall = (addDoc as any).mock.calls.find(
+        (call: any) => call[1]?.type === 'dwell_high'
       );
       expect(dwellCall).toBeDefined();
       expect(dwellCall[1].payload.metadata.duration).toBeGreaterThan(15);
     });
 
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('should not track dwell time if < 15s', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     const { unmount } = renderHook(() => useActivityTracker());
 
     // Only 10 seconds
     act(() => {
-      jest.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(10000);
     });
 
     unmount();
 
     await waitFor(() => {
-      const dwellCall = (addDoc as jest.Mock).mock.calls.find(
-        (call) => call[1]?.type === 'dwell_high'
+      const dwellCall = (addDoc as any).mock.calls.find(
+        (call: any) => call[1]?.type === 'dwell_high'
       );
       expect(dwellCall).toBeUndefined();
     });
 
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('should log custom events via logEvent', async () => {
@@ -127,8 +128,8 @@ describe.skip('useActivityTracker', () => {
     });
 
     await waitFor(() => {
-      const lastCall = (addDoc as jest.Mock).mock.calls[
-        (addDoc as jest.Mock).mock.calls.length - 1
+      const lastCall = (addDoc as any).mock.calls[
+        (addDoc as any).mock.calls.length - 1
       ][1];
 
       expect(lastCall.device).toMatch(/^(Desktop|Mobile|Tablet)$/);
@@ -137,7 +138,7 @@ describe.skip('useActivityTracker', () => {
   });
 
   test('should handle Firestore errors silently', async () => {
-    (addDoc as jest.Mock).mockRejectedValue(new Error('Firestore error'));
+    (addDoc as any).mockRejectedValue(new Error('Firestore error'));
 
     const { result } = renderHook(() => useActivityTracker());
 
@@ -150,10 +151,10 @@ describe.skip('useActivityTracker', () => {
   });
 
   test('should not log if user is not available', async () => {
-    jest.resetModules();
+    vi.resetModules();
 
     // Dynamic mocks for this isolated test context
-    jest.doMock('@/hooks/use-anonymous-auth', () => ({
+    vi.doMock('@/hooks/use-anonymous-auth', () => ({
       useAnonymousAuth: () => ({
         user: null,
         loading: false,
@@ -161,14 +162,14 @@ describe.skip('useActivityTracker', () => {
     }));
 
     // Re-mock firestore for this context
-    const mockAddDoc = jest.fn();
-    jest.doMock('firebase/firestore', () => ({
+    const mockAddDoc = vi.fn();
+    vi.doMock('firebase/firestore', () => ({
       addDoc: mockAddDoc,
     }));
 
     // Re-mock other dependencies to avoid pollution or errors
-    jest.doMock('@/firebase/client', () => ({ db: {} }));
-    jest.doMock('next/navigation', () => ({ usePathname: () => '/test-page' }));
+    vi.doMock('@/firebase/client', () => ({ db: {} }));
+    vi.doMock('next/navigation', () => ({ usePathname: () => '/test-page' }));
 
     // Import module under test within the isolated context
     const { useActivityTracker: useActivityTrackerNoUser } =

@@ -14,13 +14,11 @@ export const redisMocks = {
 };
 
 export const ratelimitMocks = {
-  limit: vi
-    .fn()
-    .mockResolvedValue({
-      success: true,
-      remaining: 99,
-      reset: Date.now() + 60000,
-    }),
+  limit: vi.fn().mockResolvedValue({
+    success: true,
+    remaining: 99,
+    reset: Date.now() + 60000,
+  }),
 };
 
 // --- Firebase Admin Mock ---
@@ -53,14 +51,14 @@ vi.mock('firebase-admin', () => {
 
 // --- Upstash Redis & Ratelimit Mocks ---
 vi.mock('@upstash/redis', () => ({
-  Redis: vi.fn().mockImplementation(function () {
+  Redis: vi.fn().mockImplementation(function (this: any) {
     this.get = redisMocks.get;
     this.set = redisMocks.set;
   }),
 }));
 
 vi.mock('@upstash/ratelimit', () => ({
-  Ratelimit: vi.fn().mockImplementation(function () {
+  Ratelimit: vi.fn().mockImplementation(function (this: any) {
     this.limit = ratelimitMocks.limit;
   }),
 }));
@@ -81,4 +79,32 @@ vi.mock('next/headers', () => ({
       return '127.0.0.1';
     },
   }),
+}));
+
+// --- Firebase Client Mocks ---
+vi.mock('firebase/app', () => ({
+  initializeApp: vi.fn(),
+  getApps: vi.fn(() => []),
+  getApp: vi.fn(),
+}));
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({})),
+  signInAnonymously: vi.fn(),
+  onAuthStateChanged: vi.fn(),
+}));
+
+vi.mock('firebase/firestore', () => ({
+  getFirestore: vi.fn(),
+  collection: vi.fn(),
+  doc: vi.fn(),
+  addDoc: vi.fn(),
+}));
+
+vi.mock('resend', () => ({
+  Resend: vi.fn().mockImplementation(() => ({
+    emails: {
+      send: vi.fn().mockResolvedValue({ id: 'mock-id' }),
+    },
+  })),
 }));

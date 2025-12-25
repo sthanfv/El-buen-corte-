@@ -1,15 +1,15 @@
 import { POST } from '@/app/api/upload/blob/route';
-import { NextResponse } from 'next/server';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
-jest.mock('@/lib/firebase', () => ({
+vi.mock('@/lib/firebase', () => ({
   adminAuth: {
-    verifyIdToken: jest.fn().mockResolvedValue({ admin: true }),
+    verifyIdToken: vi.fn().mockResolvedValue({ admin: true }),
   },
 }));
 
-jest.mock('next/headers', () => ({
-  headers: jest.fn().mockResolvedValue({
+vi.mock('next/headers', () => ({
+  headers: vi.fn().mockResolvedValue({
     get: (key: string) => {
       if (key === 'Authorization') return 'Bearer valid_token';
       return null;
@@ -17,7 +17,7 @@ jest.mock('next/headers', () => ({
   }),
 }));
 
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('Upload API', () => {
   const mockFile = new File(['dummy content'], 'test.png', {
@@ -25,7 +25,7 @@ describe('Upload API', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.BLOB_READ_WRITE_TOKEN = 'mock_token';
   });
 
