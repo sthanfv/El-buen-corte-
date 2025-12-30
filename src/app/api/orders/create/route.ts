@@ -4,18 +4,7 @@ import { OrderSchema } from '@/schemas/order';
 import { headers } from 'next/headers';
 import { logger } from '@/lib/logger';
 import { processOrderEvent } from '@/lib/events-handler';
-import { Redis } from '@upstash/redis';
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
-
-// Simple In-Memory Rate Limiter
-// In production, use Upstash/Redis for multi-instance consistency
-const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
-const LIMIT = 5; // orders
-const WINDOW = 60 * 60 * 1000; // 1 hour
+import { orderRateLimit, redis } from '@/lib/ratelimit';
 
 export async function POST(req: Request) {
   try {
@@ -23,26 +12,29 @@ export async function POST(req: Request) {
     const ip = headersList.get('x-forwarded-for') || 'unknown';
     const authHeader = headersList.get('Authorization');
 
-    // 1. Rate Limiting Check
-    const now = Date.now();
-    const userLimit = rateLimitMap.get(ip) || { count: 0, lastReset: now };
+    // 1. Rate Limiting Check (Distributed via Redis)
+    const { success, limit, reset, remaining } = await orderRateLimit.limit(ip);
 
-    if (now - userLimit.lastReset > WINDOW) {
-      userLimit.count = 0;
-      userLimit.lastReset = now;
-    }
-
-    if (userLimit.count >= LIMIT) {
+    if (!success) {
       logger.warn('Rate limit hit for order creation', {
         ip,
         endpoint: '/api/orders/create',
+        remaining,
+        reset,
       });
       return NextResponse.json(
         {
           error:
             'Has superado el límite de pedidos permitidos por hora. Por favor, contacta a soporte.',
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+          },
+        }
       );
     }
 
@@ -184,9 +176,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, id: result.id, duplicate: true });
     }
 
-    // 4. Update rate limit counter
-    userLimit.count++;
-    rateLimitMap.set(ip, userLimit);
+    // 4. Rate limit counter is handled automatically by Upstash
 
     // ✅ DESACOPLAMIENTO: El usuario recibe respuesta inmediata.
     // Las tareas pesadas (Email, Analítica, Notificaciones) ocurren en background.

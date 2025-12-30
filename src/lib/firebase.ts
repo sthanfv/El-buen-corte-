@@ -25,9 +25,7 @@ if (!admin.apps.length) {
       // Option B: JSON Blob (Fallback)
       cert = JSON.parse(serviceAccountJson);
     } else {
-      throw new Error(
-        'Missing Firebase Admin Credentials.'
-      );
+      throw new Error('Missing Firebase Admin Credentials.');
     }
 
     admin.initializeApp({
@@ -40,3 +38,4 @@ if (!admin.apps.length) {
 
 export const adminAuth = admin.auth();
 export const adminDb = admin.firestore();
+export const FieldValue = admin.firestore.FieldValue;

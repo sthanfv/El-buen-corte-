@@ -18,16 +18,24 @@ export async function POST(req: NextRequest) {
     const idToken = req.headers.get('Authorization')!.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
-    const { id, updates } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const {
+      id,
+      status: rawNextStatus,
+      transactionId,
+      notes,
+      confirmAction,
+      decisionType, // Requerido para formalizar la acción
+      reason, // Motivo de la decisión humana
+    } = body;
 
-    if (!id || !updates) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Faltan campos obligatorios' },
+        { error: 'Faltan campos obligatorios (id)' },
         { status: 400 }
       );
     }
 
-    // ✅ SECURITY: Immutability Check
     const orderRef = adminDb.collection('orders').doc(id);
     const orderSnap = await orderRef.get();
 
@@ -38,55 +46,146 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const currentOrder = orderSnap.data();
-    let currentStatus = (currentOrder?.status || 'CREATED').toUpperCase();
+    const currentOrder = orderSnap.data() || {};
+    let currentStatus = (currentOrder.status || 'CREATED').toUpperCase();
 
-    // Mapeo legado: pending -> WAITING_PAYMENT
+    // Normalizado de estados legados
     if (currentStatus === 'PENDING' || currentStatus === 'PENDING_VERIFICATION')
       currentStatus = 'WAITING_PAYMENT';
 
-    const { status: rawNextStatus, transactionId, notes } = updates;
-    const nextStatus = rawNextStatus?.toUpperCase();
+    const isManualChange = rawNextStatus && rawNextStatus !== currentStatus;
 
-    // ✅ FSM FLEXIBLE (MANDATO-FILTRO): Administradores pueden saltar estados
-    // Solo impedimos transiciones desde estados terminales (DELIVERED, CANCELLED...)
+    // 0️⃣ GOBERNANZA DEL SISTEMA (Modo Día Negro)
+    const {
+      getSystemMode,
+      isActionAllowed,
+      generateCorrelationId,
+    } = require('@/lib/system-governance');
+    const systemMode = await getSystemMode();
+    const correlationId = generateCorrelationId();
+
+    if (
+      !isActionAllowed(systemMode, 'ORDER_STATUS_OVERRIDE') &&
+      isManualChange
+    ) {
+      return NextResponse.json(
+        {
+          error: 'Acceso Denegado: Modo de Emergencia Activo',
+          message:
+            'El sistema se encuentra en un estado de protección crítica y no permite cambios manuales en este momento.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 1️⃣ GUARDRAILS: Bloqueo de errores humanos (MANDATO-FILTRO)
+
+    // Inmutabilidad de estados terminales
     const terminalStatuses = [
       'DELIVERED',
       'CANCELLED',
       'CANCELLED_TIMEOUT',
-      'RETURNED',
       'REFUNDED',
+      'RETURNED',
     ];
+    if (terminalStatuses.includes(currentStatus)) {
+      return NextResponse.json(
+        {
+          error: `El pedido está en estado terminal (${currentStatus}) y es inmutable.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Regla de las 24 horas y nivel de acceso
+    const createdAt = currentOrder.createdAt
+      ? new Date(currentOrder.createdAt).getTime()
+      : Date.now();
+    const isOldOrder = Date.now() - createdAt > 24 * 60 * 60 * 1000;
+
+    // Simulación de validación de nivel de acceso (SuperAdmin/Owner)
+    // En un sistema real, esto leería los custom claims del decodedToken
+    const isSuperAdmin =
+      decodedToken.role === 'OWNER' || decodedToken.admin === true;
+
+    if (isOldOrder && !isSuperAdmin) {
+      return NextResponse.json(
+        {
+          error: 'Acceso Restringido',
+          message:
+            'Los pedidos con más de 24h de antigüedad solo pueden ser modificados por un SuperAdministrador.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 2️⃣ FORMALIZACIÓN DE DECISIÓN (Anti-Caos)
+    if (isManualChange && (!reason || reason.length < 5)) {
+      return NextResponse.json(
+        {
+          error:
+            'Toda decisión manual debe formalizarse con un motivo válido (mínimo 5 caracteres).',
+        },
+        { status: 400 }
+      );
+    }
+
+    const nextStatus = rawNextStatus?.toUpperCase();
+
+    // 3️⃣ FSM & DOBLE CONFIRMACIÓN (Ya implementado, mantenemos lógica)
+    const {
+      canTransition,
+      requiresDoubleConfirmation,
+      PENDING_ACTION_TTL_MS,
+    } = require('@/lib/order-lifecycle');
 
     if (nextStatus && nextStatus !== currentStatus) {
-      // ✅ OPERACIÓN REAL: DELIVERED es inmutable para proteger integridad de cierre
-      if (currentStatus === 'DELIVERED') {
+      if (!canTransition(currentStatus, nextStatus)) {
         return NextResponse.json(
           {
-            error:
-              'No se puede modificar un pedido que ya ha sido entregado (DELIVERED). Para devoluciones use el estado RETURNED.',
+            error: 'Transición de estado inválida',
+            message: `No es posible pasar de ${currentStatus} a ${nextStatus} directamente.`,
           },
           { status: 400 }
         );
       }
 
-      if (
-        terminalStatuses.includes(currentStatus) &&
-        !['REFUNDED', 'RETURNED'].includes(nextStatus)
-      ) {
-        return NextResponse.json(
-          {
-            error: `No se puede modificar un pedido en estado terminal: ${currentStatus}`,
-          },
-          { status: 400 }
-        );
+      // 2️⃣ DOBLE CONFIRMACIÓN (MANDATO-FILTRO)
+      if (requiresDoubleConfirmation(nextStatus) && !confirmAction) {
+        const pendingAction = {
+          type: 'STATUS_CHANGE',
+          targetStatus: nextStatus,
+          expiresAt: Date.now() + PENDING_ACTION_TTL_MS,
+        };
+
+        await orderRef.update({ pendingAction });
+
+        return NextResponse.json({
+          confirmationRequired: true,
+          message: `La acción '${nextStatus}' requiere doble confirmación.`,
+          expiresIn: '5 minutos',
+        });
       }
 
-      // ✅ REGLA DE NEGOCIO: Conciliación financiera obligatoria al confirmar pago
+      if (confirmAction) {
+        const pending = currentOrder.pendingAction;
+        if (
+          !pending ||
+          pending.targetStatus !== nextStatus ||
+          Date.now() > pending.expiresAt
+        ) {
+          return NextResponse.json(
+            { error: 'Confirmación inválida o expirada' },
+            { status: 400 }
+          );
+        }
+      }
+
+      // 3️⃣ REGLA DE NEGOCIO: Conciliación financiera
       if (
         nextStatus === 'PAID_VERIFIED' &&
         !transactionId &&
-        !currentOrder?.transactionId
+        !currentOrder.transactionId
       ) {
         return NextResponse.json(
           {
@@ -98,51 +197,58 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Sanitize updates
-    const sanitizedUpdates: any = {};
-    if (nextStatus) sanitizedUpdates.status = nextStatus;
-    if (transactionId) sanitizedUpdates.transactionId = transactionId;
-    if (notes) sanitizedUpdates.notes = notes;
+    // 4️⃣ EJECUCIÓN ATÓMICA (Transacción)
+    const { FieldValue } = require('@/lib/firebase');
 
-    // ✅ AUDITORÍA: Registro de transición e historial
-    const now = new Date();
-    const nowMs = now.getTime();
-
-    const historyItem = {
-      status: nextStatus || currentStatus, // Legacy support
-      timestamp: now.toISOString(), // Legacy support
-
-      // ✅ MANDATO-FILTRO: Trazabilidad exacta
-      at: nowMs,
-      from: currentStatus,
-      to: nextStatus || currentStatus,
-      by: 'admin', // Or decodedToken.email if available, but 'admin' requested
-      userId: decodedToken.uid, // Internal tracking
-
-      isManualOverride: true,
-      durationMs: currentOrder?.updatedAt
-        ? nowMs - new Date(currentOrder.updatedAt).getTime()
-        : 0,
+    const sanitizedUpdates: any = {
+      status: nextStatus || currentStatus,
+      updatedAt: new Date().toISOString(),
+      updatedBy: decodedToken.uid,
+      pendingAction: FieldValue.delete(),
     };
 
-    sanitizedUpdates.updatedAt = now.toISOString();
-    sanitizedUpdates.updatedBy = decodedToken.uid;
-
-    // ✅ Lógica de cierre de ciclo
+    if (transactionId) sanitizedUpdates.transactionId = transactionId;
+    if (notes) sanitizedUpdates.notes = notes;
     if (nextStatus === 'DELIVERED' && currentStatus !== 'DELIVERED') {
-      sanitizedUpdates.deliveredAt = now.toISOString();
+      sanitizedUpdates.deliveredAt = sanitizedUpdates.updatedAt;
     }
 
-    // Usamos arrayUnion para no sobreescribir el historial
-    const { admin } = require('firebase-admin'); // Import dynamic if needed or use adminDb
-    const firebaseAdmin = require('firebase-admin');
+    const historyItem = {
+      at: Date.now(),
+      from: currentStatus,
+      to: nextStatus || currentStatus,
+      by: 'admin',
+      userId: decodedToken.uid,
+      reason: reason || 'Acción automática/estándar',
+      type: decisionType || 'OVERRIDE_ESTADO',
+      correlationId: correlationId,
+    };
 
-    await orderRef.update({
-      ...sanitizedUpdates,
-      history: firebaseAdmin.firestore.FieldValue.arrayUnion(historyItem),
+    // Usamos transacción para asegurar que la decisión se guarde junto al pedido
+    await adminDb.runTransaction(async (transaction: any) => {
+      // 1. Crear documento en manual_decisions si es cambio manual
+      if (isManualChange) {
+        const decisionRef = adminDb.collection('manual_decisions').doc();
+        transaction.set(decisionRef, {
+          orderId: id,
+          type: decisionType || 'OVERRIDE_ESTADO',
+          reason: reason,
+          operatorId: decodedToken.uid,
+          at: Date.now(),
+          previousStatus: currentStatus,
+          newStatus: nextStatus,
+          correlationId: correlationId,
+        });
+      }
+
+      // 2. Actualizar pedido
+      transaction.update(orderRef, {
+        ...sanitizedUpdates,
+        history: FieldValue.arrayUnion(historyItem),
+      });
     });
 
-    // ✅ AUDIT LOG (Phase 2)
+    // 5️⃣ AUDITORÍA FORENSE (MANDATO-FILTRO)
     const headersList = await headers();
     await logAdminAction({
       actorId: decodedToken.uid,
@@ -150,16 +256,18 @@ export async function POST(req: NextRequest) {
       targetId: id,
       before: { status: currentStatus },
       after: { status: nextStatus || currentStatus, ...sanitizedUpdates },
+      reason: reason || 'Acción operativa estándar',
+      correlationId: correlationId,
       ip: headersList.get('x-forwarded-for') || 'unknown',
       userAgent: headersList.get('user-agent') || 'unknown',
+      metadata: { systemMode },
     });
 
-    logger.info('Order updated by admin', {
-      orderId: id,
-      adminUid: decodedToken.uid,
-      updates: Object.keys(sanitizedUpdates),
+    return NextResponse.json({
+      success: true,
+      status: nextStatus || currentStatus,
+      correlationId,
     });
-    return NextResponse.json({ success: true });
   } catch (e: any) {
     logger.error('Unexpected error in order update', { error: e.message || e });
     // ✅ SECURITY: Precise error handling

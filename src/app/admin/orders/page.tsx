@@ -42,6 +42,7 @@ import {
   Calendar,
   Tag,
   BarChart3,
+  AlertTriangle,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RetentionDashboard } from '@/components/admin/RetentionDashboard';
@@ -54,24 +55,50 @@ interface OrderWithId extends Order {
 
 import { autoCancelExpiredOrders } from '@/lib/order-utils';
 
+import { SystemGovernanceControl } from '@/components/admin/SystemGovernanceControl';
+import { SystemSettings } from '@/schemas/system';
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithId[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(
+    null
+  );
   const { toast } = useToast();
 
   useEffect(() => {
     fetchOrders();
+    fetchSystemSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function fetchSystemSettings() {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/admin/system/settings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSystemSettings(data);
+      }
+    } catch (e) {}
+  }
 
   // ✅ AUTO-CANCEL (MANDATO-FILTRO)
   useEffect(() => {
     if (orders.length > 0) {
       autoCancelExpiredOrders(
         orders,
-        (id, data) => handleStatusChange(id, data.status as string),
+        (id, data) =>
+          handleStatusChange(
+            id,
+            data.status as string,
+            false,
+            'Expiración automática del tiempo de pago (Sistema)'
+          ),
         (order) => {} // TODO: Implement real stock restore API logic here
       );
     }
@@ -96,7 +123,30 @@ export default function OrdersPage() {
     }
   }
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (
+    orderId: string,
+    newStatus: string,
+    confirmAction = false,
+    providedReason = ''
+  ) => {
+    // Si es un cambio inicial (no confirmación) y no hay motivo previo, pedimos el motivo
+    let reason = providedReason;
+    if (!confirmAction && !reason) {
+      reason =
+        window.prompt(
+          `📝 FORMALIZACIÓN DE DECISIÓN:\nPor favor, ingresa el motivo del cambio a '${newStatus}':\n(Mínimo 5 caracteres)`
+        ) || '';
+
+      if (reason.length < 5) {
+        toast({
+          type: 'error',
+          message:
+            'Acción cancelada: Se requiere un motivo válido para el registro de auditoría.',
+        });
+        return;
+      }
+    }
+
     setIsUpdating(orderId);
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -106,12 +156,35 @@ export default function OrdersPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id: orderId, updates: { status: newStatus } }),
+        body: JSON.stringify({
+          id: orderId,
+          status: newStatus,
+          confirmAction: confirmAction,
+          reason: reason,
+          decisionType: 'OVERRIDE_ESTADO',
+        }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to update status');
+        throw new Error(
+          data.error || data.message || 'Failed to update status'
+        );
+      }
+
+      // Si se requiere confirmación por DCP (Doble Confirmación Preventiva)
+      if (data.confirmationRequired) {
+        const confirmed = window.confirm(
+          `⚠️ ACCIÓN CRÍTICA: ${data.message}\n\n¿Confirmas que el motivo '${reason}' es correcto y deseas proceder?`
+        );
+        if (confirmed) {
+          // Reintentamos con el mismo motivo y flag de confirmación
+          return handleStatusChange(orderId, newStatus, true);
+        } else {
+          toast({ type: 'info', message: 'Acción cancelada por el usuario.' });
+          return;
+        }
       }
 
       setOrders((prev) =>
@@ -119,13 +192,18 @@ export default function OrdersPage() {
           o.id === orderId ? { ...o, status: newStatus as any } : o
         )
       );
-      toast({ type: 'success', message: 'Estado actualizado correctamente.' });
+      toast({
+        type: 'success',
+        message: `Decisión registrada y estado actualizado. ID: ${data.correlationId || 'N/A'}`,
+      });
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Error al actualizar el estado.';
-      toast({ type: 'error', message: errorMessage });
+      toast({
+        type: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Error al procesar la decisión.',
+      });
     } finally {
       setIsUpdating(null);
     }
@@ -163,7 +241,29 @@ export default function OrdersPage() {
 
   return (
     <AdminGuard>
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="space-y-6 animate-in fade-in duration-500 container mx-auto p-4 md:p-6 lg:p-10">
+        {/* 🚨 BANNER DE EMERGENCIA (MANDATO-FILTRO) */}
+        {systemSettings?.mode !== 'NORMAL' && systemSettings?.mode && (
+          <div
+            className={cn(
+              'p-4 rounded-lg border-2 flex items-center gap-4 animate-pulse mb-6',
+              systemSettings.mode === 'EMERGENCY'
+                ? 'bg-red-500/20 border-red-500 text-red-500'
+                : 'bg-yellow-500/20 border-yellow-500 text-yellow-500'
+            )}
+          >
+            <AlertTriangle className="w-8 h-8 flex-shrink-0" />
+            <div>
+              <h2 className="font-black uppercase tracking-tighter text-lg leading-none">
+                SISTEMA EN MODO {systemSettings.mode}
+              </h2>
+              <p className="text-sm font-bold opacity-80">
+                {systemSettings.emergencyMessage ||
+                  'Se han activado protecciones críticas. Ciertas acciones manuales están restringidas.'}
+              </p>
+            </div>
+          </div>
+        )}
         <Tabs defaultValue="operational" className="w-full">
           <TabsList className="bg-secondary/50 p-1 rounded-xl mb-8">
             <TabsTrigger
@@ -188,22 +288,24 @@ export default function OrdersPage() {
                   Gestión de Pedidos
                 </h1>
                 <p className="text-gray-500 mt-1">
-                  Control total sobre las transacciones y estados de envío.
+                  Control total, gobernanza y auditoría forense de
+                  transacciones.
                 </p>
               </div>
 
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Buscar por cliente, ticket, fecha..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <div className="flex flex-col md:flex-row flex-wrap gap-4 items-center w-full md:w-auto">
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="Buscar por cliente, ticket, fecha..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <SystemGovernanceControl />
+                <DailySummaryDialog orders={orders} />
               </div>
-
-              {/* ✅ RESUMEN DIARIO (MANDATO-FILTRO) */}
-              <DailySummaryDialog orders={orders} />
             </div>
 
             {/* KPI Cards */}

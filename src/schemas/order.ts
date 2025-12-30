@@ -9,6 +9,7 @@ export const OrderStatusEnum = z.enum([
   'ROUTING',
   'DELIVERED',
   'CANCELLED_TIMEOUT',
+  'CANCELLED',
   // ✅ PHASE 6: Legal Invoicing (Blindaje DIAN)
   'INVOICE_PENDING',
   'INVOICE_ISSUED',
