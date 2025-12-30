@@ -5,6 +5,13 @@ import { headers } from 'next/headers';
 import { logger } from '@/lib/logger';
 import { processOrderEvent } from '@/lib/events-handler';
 import { orderRateLimit, redis } from '@/lib/ratelimit';
+import {
+  AppError,
+  ValidationError,
+  AuthenticationError,
+  RateLimitError,
+} from '@/lib/errors';
+import { validateAndSanitize } from '@/lib/validation';
 
 export async function POST(req: Request) {
   try {
@@ -13,51 +20,31 @@ export async function POST(req: Request) {
     const authHeader = headersList.get('Authorization');
 
     // 1. Rate Limiting Check (Distributed via Redis)
-    const { success, limit, reset, remaining } = await orderRateLimit.limit(ip);
-
-    if (!success) {
-      logger.warn('Rate limit hit for order creation', {
+    let rateLimitResult = { success: true, limit: 0, reset: 0, remaining: 0 };
+    try {
+      rateLimitResult = await orderRateLimit.limit(ip);
+    } catch (error) {
+      logger.error('Rate limit service failure (Fail-Open active)', {
         ip,
-        endpoint: '/api/orders/create',
-        remaining,
-        reset,
+        error,
       });
-      return NextResponse.json(
-        {
-          error:
-            'Has superado el límite de pedidos permitidos por hora. Por favor, contacta a soporte.',
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': limit.toString(),
-            'X-RateLimit-Remaining': remaining.toString(),
-            'X-RateLimit-Reset': reset.toString(),
-          },
-        }
+    }
+
+    if (!rateLimitResult.success) {
+      throw new RateLimitError(
+        'Has superado el límite de pedidos permitidos por hora. Por favor, contacta a soporte.'
       );
     }
 
     // 2. Security Check: Verify Firebase Auth (Anonymous or Signed-in)
     if (!authHeader?.startsWith('Bearer ')) {
-      logger.audit('Authentication failed: Missing Bearer token', {
-        ip,
-        endpoint: '/api/orders/create',
-      });
-      return NextResponse.json(
-        { error: 'Sesión no válida para realizar el pedido' },
-        { status: 401 }
-      );
+      throw new AuthenticationError('Sesión no válida para realizar el pedido');
     }
     const token = authHeader.split('Bearer ')[1];
     try {
       await adminAuth.verifyIdToken(token);
     } catch (e) {
-      logger.audit('Authentication failed: Invalid token', {
-        ip,
-        endpoint: '/api/orders/create',
-      });
-      return NextResponse.json({ error: 'Sesión no válida' }, { status: 401 });
+      throw new AuthenticationError('Sesión no válida');
     }
 
     const body = await req.json();
@@ -93,8 +80,8 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Validate Input
-    const validatedOrder = OrderSchema.parse(body);
+    // 3. Validate and Sanitize Input (FASE 2)
+    const validatedOrder = validateAndSanitize(OrderSchema, body);
 
     // ✅ ESTRATEGIA DE INGENIERÍA: TRANSACCIÓN ATÓMICA ACID (MANDATO-FILTRO)
     // Garantiza que no vendamos carne que ya no existe por condiciones de carrera.
@@ -118,14 +105,16 @@ export async function POST(req: Request) {
         const productSnap = await transaction.get(productRef);
 
         if (!productSnap.exists) {
-          throw new Error(`Producto ${item.name} no encontrado en inventario.`);
+          throw new ValidationError(
+            `Producto ${item.name} no encontrado en inventario.`
+          );
         }
 
         const currentStock = productSnap.data()?.stock || 0;
         // Para asados, el stock suele ser por unidades o por kg.
         // Implementamos resta por unidad (1 item = 1 resta de stock) para simplificar según exigencia.
         if (currentStock < 1) {
-          throw new Error(
+          throw new ValidationError(
             `Lo siento, el ${item.name} se ha agotado mientras realizabas tu pedido.`
           );
         }
@@ -192,21 +181,26 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, id: result.id });
   } catch (e: any) {
-    logger.error('Unexpected error in order creation', {
+    // ✅ MANEJO CENTRALIZADO DE ERRORES (MANDATO-FILTRO)
+    const isAppError = e instanceof AppError;
+    const statusCode = isAppError ? e.statusCode : 500;
+    const message = isAppError
+      ? e.message
+      : 'Ha ocurrido un error inesperado. Por favor, contacta a soporte.';
+
+    logger.error('API Error: /api/orders/create', {
       error: e.message || e,
+      code: isAppError ? e.code : 'UNKNOWN_ERROR',
+      ip: (await headers()).get('x-forwarded-for') || 'unknown',
     });
 
     if (e.name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Datos de pedido inválidos.' },
+        { error: 'Datos de pedido inválidos.', details: e.errors },
         { status: 400 }
       );
     }
 
-    // Errores de la transacción (Ej: Sin Stock)
-    return NextResponse.json(
-      { error: e.message || 'Ha ocurrido un error al procesar su pedido.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: statusCode });
   }
 }

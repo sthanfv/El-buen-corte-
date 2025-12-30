@@ -57,11 +57,20 @@ vi.mock('@upstash/redis', () => ({
   }),
 }));
 
-vi.mock('@upstash/ratelimit', () => ({
-  Ratelimit: vi.fn().mockImplementation(function (this: any) {
+vi.mock('@upstash/ratelimit', () => {
+  const Ratelimit = vi.fn().mockImplementation(function (this: any) {
     this.limit = ratelimitMocks.limit;
-  }),
-}));
+  });
+
+  // @ts-ignore
+  Ratelimit.slidingWindow = vi.fn().mockReturnValue({});
+  // @ts-ignore
+  Ratelimit.fixedWindow = vi.fn().mockReturnValue({});
+  // @ts-ignore
+  Ratelimit.tokenBucket = vi.fn().mockReturnValue({});
+
+  return { Ratelimit };
+});
 
 // --- App Utilities ---
 vi.mock('@/lib/logger', () => ({

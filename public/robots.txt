@@ -1,6 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /api
-Disallow: /_next
-sitemap: https://elbuencorte.com/sitemap.xml
+
+Sitemap: https://elbuencorte.co/sitemap.xml

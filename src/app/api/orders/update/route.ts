@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
-import { verifyAdmin } from '@/lib/auth-server';
+import { validateRouteRole } from '@/lib/auth-server';
+import { AppError } from '@/lib/errors';
 import { logAdminAction } from '@/lib/audit-logger';
 import { headers } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await verifyAdmin(req))) {
-      return NextResponse.json(
-        { error: 'Acceso denegado: Privilegios insuficientes' },
-        { status: 403 }
-      );
-    }
-
-    // Recuperamos el token para trazabilidad (updatedBy)
-    const idToken = req.headers.get('Authorization')!.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const decodedToken = await validateRouteRole(req, ['admin', 'staff']);
 
     const body = await req.json().catch(() => ({}));
     const {
@@ -105,8 +97,7 @@ export async function POST(req: NextRequest) {
 
     // Simulación de validación de nivel de acceso (SuperAdmin/Owner)
     // En un sistema real, esto leería los custom claims del decodedToken
-    const isSuperAdmin =
-      decodedToken.role === 'OWNER' || decodedToken.admin === true;
+    const isSuperAdmin = decodedToken.role === 'admin';
 
     if (isOldOrder && !isSuperAdmin) {
       return NextResponse.json(
@@ -269,17 +260,11 @@ export async function POST(req: NextRequest) {
       correlationId,
     });
   } catch (e: any) {
+    const isAppError = e instanceof AppError;
+    const statusCode = isAppError ? e.statusCode : 500;
+    const message = isAppError ? e.message : 'Error al actualizar el pedido';
+
     logger.error('Unexpected error in order update', { error: e.message || e });
-    // ✅ SECURITY: Precise error handling
-    if (e.code === 'permission-denied') {
-      return NextResponse.json(
-        { error: 'Permisos insuficientes en base de datos' },
-        { status: 403 }
-      );
-    }
-    return NextResponse.json(
-      { error: 'Error al actualizar el pedido' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: statusCode });
   }
 }

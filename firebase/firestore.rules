@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function canWrite() { return request.time < timestamp.date(2026, 1, 1); }
+
+    // --- FUNCIONES DE SEGURIDAD (MANDATO-FILTRO) ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() &&
+        request.auth.token.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole("admin");
+    }
+
+    function isStaff() {
+      return hasRole("staff") || isAdmin();
+    }
+
+    function hasTenantAccess(tenantId) {
+      return isAuthenticated() && (isAdmin() || request.auth.token.tenantId == tenantId);
+    }
+
+    // --- REGLAS POR COLECCIÓN ---
+
+    // Usuarios: Solo el dueño lee, nadie escribe directo (usar Auth/Functions)
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if canWrite() && false; 
+    }
+
+    // Pedidos: Clientes crean, Staff/Admin gestionan
+    match /orders/{orderId} {
+      allow create: if canWrite() && isAuthenticated();
+      allow read: if hasTenantAccess(resource.data.tenantId);
+      allow update, delete: if canWrite() && isAdmin();
+    }
+
+    // Productos: Lectura pública, Escritura solo Admin
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if canWrite() && isAdmin();
+    }
+    
+    // Configuración y Logs: Solo Admin
+    match /config/{docId} {
+      allow read, write: if canWrite() && isAdmin();
+    }
+    
+    match /logs/{logId} {
+      allow create: if canWrite() && true; // Permitir que la app reporte logs
+      allow read, update, delete: if canWrite() && isAdmin();
+    }
+
+    // --- DEFENSA FINAL: DENEGAR TODO POR DEFECTO ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

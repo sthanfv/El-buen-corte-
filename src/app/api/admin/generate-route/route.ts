@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase';
-import { headers } from 'next/headers';
+import { adminDb } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
+import { validateRouteRole } from '@/lib/auth-server';
+import { AppError } from '@/lib/errors';
 
 /**
  * MANDATO-FILTRO: Generador de Rutas para Mensajero
@@ -25,20 +26,8 @@ interface DeliveryStop {
 
 export async function POST(req: Request) {
   try {
-    // ✅ SECURITY: Verificar autenticación admin
-    const headersList = await headers();
-    const authorization = headersList.get('Authorization');
-
-    if (!authorization?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const idToken = authorization.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-
-    if (decodedToken.admin !== true) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // ✅ SECURITY: Verificar autenticación admin (FASE 3 RBAC)
+    const decodedToken = await validateRouteRole(req as any, ['admin']);
 
     // Obtener parámetros opcionales
     const body = await req.json();
@@ -118,11 +107,12 @@ export async function POST(req: Request) {
       totalToCollect,
     });
   } catch (e: any) {
+    const isAppError = e instanceof AppError;
+    const statusCode = isAppError ? e.statusCode : 500;
+    const message = isAppError ? e.message : 'Error al generar la ruta';
+
     logger.error('Error generando ruta de entrega', e);
-    return NextResponse.json(
-      { error: 'Error al generar la ruta' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: statusCode });
   }
 }
 

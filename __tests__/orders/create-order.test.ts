@@ -40,7 +40,7 @@ describe('Order Creation: Stock Integrity', () => {
     });
     const res = await createOrder(req);
     const data = await res.json();
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
     expect(data.error).toMatch(/agotado/i);
   });
 

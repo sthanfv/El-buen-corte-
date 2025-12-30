@@ -1,15 +1,13 @@
-// src/lib/firebase.ts (SERVER-SIDE ONLY)
 import * as admin from 'firebase-admin';
+import { env } from './env';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   try {
-    const serviceAccountJson = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON;
-    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-    const projectId =
-      process.env.FIREBASE_ADMIN_PROJECT_ID ||
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const serviceAccountJson = env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON;
+    const privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY;
+    const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL;
+    const projectId = env.FIREBASE_ADMIN_PROJECT_ID;
 
     let cert;
 

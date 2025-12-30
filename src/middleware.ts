@@ -2,18 +2,15 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { env } from './lib/env';
+import { rateLimit as localRateLimit } from './lib/rate-limit';
 
 // 🛡️ PRODUCTION-GRADE SECURITY: Distributed Rate Limiting with Upstash Redis
 // The keys are provided in the .env file.
 
-// Fallback prevent crash during static build analysis if envs are missing
-const redisUrl =
-  process.env.UPSTASH_REDIS_REST_URL || 'https://mock-url.upstash.io';
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || 'mock_token';
-
 const redis = new Redis({
-  url: redisUrl,
-  token: redisToken,
+  url: env.UPSTASH_REDIS_REST_URL,
+  token: env.UPSTASH_REDIS_REST_TOKEN,
 });
 
 const ratelimit = new Ratelimit({
@@ -23,11 +20,18 @@ const ratelimit = new Ratelimit({
 });
 
 export async function middleware(request: NextRequest) {
-  // Robust IP detection for Next.js middleware
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0] ||
     request.headers.get('x-real-ip') ||
     '127.0.0.1';
+
+  // 🛡️ FASE 2: Rate Limit local (Primer cortafuegos ultra-rápido)
+  if (!localRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes' },
+      { status: 429 }
+    );
+  }
 
   // ✅ BLACKLIST CHECK (DEFENSA PROACTIVA - MANDATO-FILTRO)
   try {
@@ -64,28 +68,28 @@ export async function middleware(request: NextRequest) {
   // 🛡️ CONSOLIDATED SECURITY HEADERS (OWASP RECOMMENDATIONS)
   const headers = response.headers;
 
-  // HSTS: Forzar HTTPS siempre (1 año)
+  // HSTS: Forzar HTTPS siempre (2 años - owasp recommendation)
   headers.set(
     'Strict-Transport-Security',
-    'max-age=31536000; includeSubDomains; preload'
+    'max-age=63072000; includeSubDomains; preload'
   );
 
-  // Anti-Clickjacking: Solo permitir iframes de mismo origen
-  headers.set('X-Frame-Options', 'SAMEORIGIN');
+  // Anti-Clickjacking: DENY por defecto
+  headers.set('X-Frame-Options', 'DENY');
 
   // Anti-MIME Sniffing
   headers.set('X-Content-Type-Options', 'nosniff');
 
-  // Referrer Policy: Privacidad al navegar fuera
-  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Referrer Policy: Privacidad máxima
+  headers.set('Referrer-Policy', 'no-referrer');
 
-  // Permissions Policy: Deshabilitar APIs peligrosas/no usadas
+  // Permissions Policy
   headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), interest-cohort=()'
   );
 
-  // CSP: Content Security Policy (Endurecida)
+  // CSP: Content Security Policy (Endurecida FASE 2)
   headers.set(
     'Content-Security-Policy',
     "default-src 'self'; img-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.vercel-storage.com;"

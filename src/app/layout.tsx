@@ -4,18 +4,41 @@ import { Providers } from '@/components/Providers';
 import { CommandMenu } from '@/components/CommandMenu';
 
 export const metadata = {
-  title: 'El Buen Corte | Carnes Premium a Domicilio',
+  title: 'El Buen Corte | Tradición y Calidad',
   description:
-    'La mejor selección de cortes premium (Tomahawk, Picanha, Ribeye) entregados directamente a tu puerta en 24 horas.',
-  keywords: ['carne', 'premium', 'asado', 'parrilla', 'delivery', 'bogota'],
+    'Carnes seleccionadas de calidad superior y cocina tradicional entregada directamente a tu puerta en 24 horas.',
+  keywords: [
+    'carne',
+    'premium',
+    'asado',
+    'parrilla',
+    'delivery',
+    'bogota',
+    'tradicion',
+  ],
   openGraph: {
-    title: 'El Buen Corte | Carnes Premium',
+    title: 'El Buen Corte | Tradición, Calidad y Sabor',
     description:
-      'Calidad superior para tus asados. Pide online y recibe en casa.',
+      'La mejor selección de cortes premium para tus asados. Pide online y recibe en casa.',
+    url: 'https://elbuencorte.co',
+    siteName: 'El Buen Corte',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'El Buen Corte - Carnes Premium',
+      },
+    ],
     type: 'website',
   },
   authors: [{ name: 'El Buen Corte' }],
   robots: 'index, follow',
+  manifest: '/site.webmanifest',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export const viewport = {

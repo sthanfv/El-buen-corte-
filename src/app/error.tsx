@@ -1,55 +1,73 @@
 'use client';
 
 import { useEffect } from 'react';
+import { ChefHat, AlertTriangle, Home, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export default function Error({
-    error,
-    reset,
+export default function GlobalError({
+  error,
+  reset,
 }: {
-    error: Error & { digest?: string };
-    reset: () => void;
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
-    useEffect(() => {
-        // Loguear el error al sistema de auditoría si es crítico
-        console.error('Error Crítico de Aplicación:', error);
-    }, [error]);
+  useEffect(() => {
+    // Aquí se reportaría el error a un servicio externo si fuera necesario
+    console.error('Global Error Boundary caught:', error);
+  }, [error]);
 
-    return (
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6 selection:bg-primary">
-            <div className="max-w-lg text-center space-y-10">
-                <div className="relative">
-                    <div className="absolute inset-0 blur-3xl bg-primary/20 rounded-full animate-pulse" />
-                    <h1 className="relative text-8xl font-black italic text-primary/80 tracking-tighter">ERROR <span className="text-white">500</span></h1>
-                </div>
-
-                <div className="space-y-4 relative">
-                    <h2 className="text-3xl font-black uppercase italic tracking-widest text-white">Fallo en el <span className="text-primary">Suministro</span></h2>
-                    <p className="text-zinc-500 font-medium max-w-sm mx-auto">
-                        Hemos detectado una anomalía técnica en el servidor. Por seguridad del <b>MANDATO-FILTRO</b>, hemos aislado la sesión.
-                    </p>
-                    <div className="text-[10px] font-mono text-zinc-700 bg-black p-2 rounded border border-white/5 truncate">
-                        LOG_ID: {error.digest || 'UNKNOWN_SESSION_FAIL'}
-                    </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <Button
-                        onClick={() => reset()}
-                        className="h-12 px-8 bg-white text-black hover:bg-primary hover:text-white font-black italic uppercase transition-all duration-500"
-                    >
-                        Reintentar Conexión
-                    </Button>
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="h-12 px-8 border-white/10 text-white hover:bg-white/5 font-black italic uppercase transition-all duration-500"
-                    >
-                        <Link href="/">Salir al Inicio</Link>
-                    </Button>
-                </div>
-            </div>
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 dark:bg-zinc-950">
+      <div className="max-w-md w-full text-center space-y-8 p-12 bg-white rounded-3xl shadow-2xl border border-black/5 dark:bg-zinc-900 dark:border-white/5">
+        <div className="flex justify-center">
+          <div className="relative">
+            <div className="absolute -inset-4 bg-red-500/20 blur-2xl rounded-full"></div>
+            <ChefHat className="w-20 h-20 text-red-500 relative" />
+            <AlertTriangle className="w-8 h-8 text-black bg-white rounded-full p-1 absolute bottom-0 right-0 shadow-lg dark:bg-zinc-800 dark:text-white" />
+          </div>
         </div>
-    );
+
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white">
+            ¡Oops! Algo salió <span className="text-red-500">mal</span>
+          </h1>
+          <p className="text-muted-foreground font-medium text-lg leading-relaxed">
+            Nuestro equipo de carniceros digitales ya está trabajando para
+            solucionar este percance. Tu pedido y tus datos están seguros.
+          </p>
+
+          <div className="bg-red-50/50 p-4 rounded-xl border border-red-100 dark:bg-red-500/5 dark:border-red-500/10">
+            <p className="text-xs font-mono text-red-600/70 dark:text-red-400/70 uppercase tracking-widest font-bold">
+              ID del error: {error.digest || 'AUDIT-FAIL-SAFE'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <Button
+            onClick={() => reset()}
+            className="flex-1 h-14 font-black italic uppercase tracking-widest bg-black text-white hover:bg-red-500 transition-all duration-300 dark:bg-white dark:text-black"
+          >
+            <RefreshCcw className="mr-2 h-5 w-5" />
+            Intentar de nuevo
+          </Button>
+          <Button
+            variant="outline"
+            asChild
+            className="flex-1 h-14 font-black italic uppercase tracking-widest border-2 hover:bg-gray-100 transition-all duration-300 dark:hover:bg-zinc-800"
+          >
+            <Link href="/">
+              <Home className="mr-2 h-5 w-5" />
+              Ir al inicio
+            </Link>
+          </Button>
+        </div>
+
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[.25em]">
+          Protocolo MANDATO-FILTRO Activo
+        </p>
+      </div>
+    </div>
+  );
 }

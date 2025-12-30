@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase';
-import { verifyAdmin } from '@/lib/auth-server';
+import { validateRouteRole } from '@/lib/auth-server';
+import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
 /**
@@ -9,28 +10,35 @@ import { logger } from '@/lib/logger';
  * Protocolo: MANDATO-FILTRO.
  */
 export async function POST(req: NextRequest) {
-    try {
-        if (!await verifyAdmin(req)) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-        }
+  try {
+    await validateRouteRole(req, ['admin']);
 
-        const snapshot = await adminDb.collection('products').get();
-        const batch = adminDb.batch();
+    const snapshot = await adminDb.collection('products').get();
+    const batch = adminDb.batch();
 
-        snapshot.docs.forEach(doc => {
-            // Asignamos un stock de 10 unidades por defecto para demo
-            batch.update(doc.ref, {
-                stock: 10,
-                updatedAt: new Date().toISOString()
-            });
-        });
+    snapshot.docs.forEach((doc) => {
+      // Asignamos un stock de 10 unidades por defecto para demo
+      batch.update(doc.ref, {
+        stock: 10,
+        updatedAt: new Date().toISOString(),
+      });
+    });
 
-        await batch.commit();
+    await batch.commit();
 
-        logger.audit('Inventario inicializado (Seed Stock)', { count: snapshot.size });
-        return NextResponse.json({ success: true, message: `Stock actualizado para ${snapshot.size} productos.` });
-    } catch (error) {
-        logger.error('Error in seed-stock', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    }
+    logger.audit('Inventario inicializado (Seed Stock)', {
+      count: snapshot.size,
+    });
+    return NextResponse.json({
+      success: true,
+      message: `Stock actualizado para ${snapshot.size} productos.`,
+    });
+  } catch (e: any) {
+    const isAppError = e instanceof AppError;
+    const statusCode = isAppError ? e.statusCode : 500;
+    const message = isAppError ? e.message : 'Internal Server Error';
+
+    logger.error('Error in seed-stock', e);
+    return NextResponse.json({ error: message }, { status: statusCode });
+  }
 }

@@ -155,6 +155,9 @@ export const OrderSchema = z.object({
   source: z
     .enum(['instagram', 'whatsapp', 'organic', 'facebook', 'search', 'direct'])
     .default('direct'),
+
+  // ✅ MULTI-TENANT: Aislamiento por negocio
+  tenantId: z.string().optional().default('el-buen-corte'),
 });
 
 export type Order = z.infer<typeof OrderSchema> & { id?: string };
@@ -176,6 +179,7 @@ export const TicketSchema = z.object({
   // ✅ SECURITY: Audit trail
   ipAddress: z.string().optional(),
   deviceType: z.string().optional(),
+  tenantId: z.string().optional(),
 });
 
 export type Ticket = z.infer<typeof TicketSchema>;
@@ -185,6 +189,7 @@ export const RateLimitCheckSchema = z.object({
   ipAddress: z.string(),
   endpoint: z.string(),
   timestamp: z.number(),
+  tenantId: z.string().optional(),
 });
 
 export type RateLimitCheck = z.infer<typeof RateLimitCheckSchema>;

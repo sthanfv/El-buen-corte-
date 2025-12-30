@@ -19,3 +19,27 @@ if (global.Response && !global.Response.json) {
 }
 
 require('@testing-library/jest-dom');
+
+// --- Upstash Redis & Ratelimit Mocks for Jest ---
+jest.mock('@upstash/redis', () => ({
+  Redis: jest.fn().mockImplementation(() => ({
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue('OK'),
+  })),
+}));
+
+jest.mock('@upstash/ratelimit', () => {
+  const Ratelimit = jest.fn().mockImplementation(() => ({
+    limit: jest.fn().mockResolvedValue({
+      success: true,
+      remaining: 99,
+      reset: Date.now() + 60000,
+    }),
+  }));
+
+  Ratelimit.slidingWindow = jest.fn().mockReturnValue({});
+  Ratelimit.fixedWindow = jest.fn().mockReturnValue({});
+  Ratelimit.tokenBucket = jest.fn().mockReturnValue({});
+
+  return { Ratelimit };
+});
