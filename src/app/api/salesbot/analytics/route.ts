@@ -1,10 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getSalesBotMetrics,
   getAggregateMetrics,
+  type SalesBotMetrics,
 } from '@/lib/salesbot-analytics';
+import { adminDb } from '@/lib/firebase';
 import { validateRouteRole } from '@/lib/auth-server';
 import { AppError } from '@/lib/errors';
+
+// ✅ Get analytics metrics (server-side)
+async function getSalesBotMetrics(ruleId?: string): Promise<SalesBotMetrics[]> {
+  try {
+    const snapshot = await adminDb.collection('salesbot_analytics').get();
+
+    let metrics: SalesBotMetrics[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const impressions = data.impressions || 0;
+      const clicks = data.clicks || 0;
+      const conversions = data.conversions || 0;
+
+      return {
+        ruleId: data.ruleId,
+        messageHash: data.messageHash,
+        impressions,
+        clicks,
+        dismissals: data.dismissals || 0,
+        conversions,
+        ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+        conversionRate: impressions > 0 ? (conversions / impressions) * 100 : 0,
+        lastUpdated: data.lastUpdated || 0,
+      };
+    });
+
+    // Filter by ruleId if provided
+    if (ruleId) {
+      metrics = metrics.filter((m) => m.ruleId === ruleId);
+    }
+
+    return metrics.sort((a, b) => b.impressions - a.impressions);
+  } catch (error) {
+    console.error('Failed to get metrics:', error);
+    return [];
+  }
+}
 
 // ✅ GET: Analytics metrics (Admin/Staff only)
 export async function GET(req: NextRequest) {

@@ -3,9 +3,9 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
     globals: true,
-    setupFiles: ['./__tests__/vitest.setup.ts'],
+    environment: 'jsdom',
+    setupFiles: './tests/setup.ts',
     include: ['__tests__/**/*.test.ts', 'tests/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
   },

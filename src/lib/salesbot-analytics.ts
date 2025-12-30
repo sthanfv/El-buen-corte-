@@ -1,5 +1,4 @@
 import { db } from '@/firebase/client';
-import { adminDb } from '@/lib/firebase';
 import {
   collection,
   doc,
@@ -152,44 +151,6 @@ async function flushAnalytics(): Promise<void> {
     console.error('Failed to flush analytics:', error);
     // Re-add events to queue if failed
     pendingEvents.push(...eventsToFlush);
-  }
-}
-
-// ✅ Get analytics metrics (server-side)
-export async function getSalesBotMetrics(
-  ruleId?: string
-): Promise<SalesBotMetrics[]> {
-  try {
-    const snapshot = await adminDb.collection('salesbot_analytics').get();
-
-    let metrics: SalesBotMetrics[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      const impressions = data.impressions || 0;
-      const clicks = data.clicks || 0;
-      const conversions = data.conversions || 0;
-
-      return {
-        ruleId: data.ruleId,
-        messageHash: data.messageHash,
-        impressions,
-        clicks,
-        dismissals: data.dismissals || 0,
-        conversions,
-        ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
-        conversionRate: impressions > 0 ? (conversions / impressions) * 100 : 0,
-        lastUpdated: data.lastUpdated || 0,
-      };
-    });
-
-    // Filter by ruleId if provided
-    if (ruleId) {
-      metrics = metrics.filter((m) => m.ruleId === ruleId);
-    }
-
-    return metrics.sort((a, b) => b.impressions - a.impressions);
-  } catch (error) {
-    console.error('Failed to get metrics:', error);
-    return [];
   }
 }
 

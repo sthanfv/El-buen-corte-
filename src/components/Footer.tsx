@@ -77,15 +77,8 @@ export default function Footer() {
         </div>
         <div>
           <h4 className="font-bold text-lg mb-6 text-foreground">Contacto</h4>
-          <ul className="space-y-4 text-muted-foreground text-sm">
-            <li className="flex gap-3">
-              <MapPin size={18} className="text-primary mt-0.5" />
-              Cra 12 # 93 - 15, Bogotá
-            </li>
-            <li className="flex gap-3">
-              <Phone size={18} className="text-primary mt-0.5" />
-              +57 (300) 123-4567
-            </li>
+          <FooterConfigLoader />
+          <ul className="space-y-4 text-muted-foreground text-sm mt-4">
             <li className="flex gap-3">
               <ShieldCheck size={18} className="text-green-500 mt-0.5" /> Pagos
               Seguros
