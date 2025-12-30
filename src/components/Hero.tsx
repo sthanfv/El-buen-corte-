@@ -22,6 +22,7 @@ export default function Hero() {
           fill
           className="object-cover"
           priority
+          fetchPriority="high"
           data-ai-hint={placeholderImages.hero[0].aiHint}
         />
       </div>

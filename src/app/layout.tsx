@@ -2,8 +2,16 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Providers } from '@/components/Providers';
 import { CommandMenu } from '@/components/CommandMenu';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata = {
+  metadataBase: new URL('https://elbuencorte.co'),
   title: 'El Buen Corte | Tradición y Calidad',
   description:
     'Carnes seleccionadas de calidad superior y cocina tradicional entregada directamente a tu puerta en 24 horas.',
@@ -53,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className={inter.variable}>
       <body className={cn('min-h-screen bg-background font-sans antialiased')}>
         <Providers>
           {children}

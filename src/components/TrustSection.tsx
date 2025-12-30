@@ -1,4 +1,3 @@
-'use client';
 import { ShieldCheck, Thermometer, ChefHat } from 'lucide-react';
 
 export default function TrustSection() {

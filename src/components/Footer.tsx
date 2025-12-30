@@ -1,4 +1,3 @@
-'use client';
 import {
   Instagram,
   Facebook,
@@ -7,35 +6,16 @@ import {
   MapPin,
   Phone,
   ShieldCheck,
-  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
-import { useConfig } from '@/lib/config';
+import dynamic from 'next/dynamic';
+
+const FooterConfigLoader = dynamic(() => import('./FooterConfigLoader'), {
+  ssr: true,
+});
 
 export default function Footer() {
-  const { config, loading } = useConfig();
-
-  if (loading) {
-    return (
-      <footer className="bg-zinc-950 text-white pt-10 pb-10 border-t border-white/5 text-center">
-        <Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" />
-      </footer>
-    );
-  }
-
-  // Fallback seguro si config es null por alguna razón rara
-  const data = config || {
-    contactPhone: '+57 (300) 123-4567',
-    contactAddress: 'Cra 12 # 93 - 15, Bogotá',
-    contactEmail: 'contacto@buencorte.co',
-    footerText:
-      'Redefiniendo la experiencia carnívora en Colombia. Pasión por el fuego, respeto por el producto.',
-    instagramUrl: '',
-    facebookUrl: '',
-    twitterUrl: '',
-  };
-
   return (
     <footer className="bg-zinc-950 text-white pt-20 pb-10 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
@@ -46,44 +26,7 @@ export default function Footer() {
               Buen<span className="text-primary">Corte</span>
             </span>
           </div>
-          <p className="text-muted-foreground max-w-sm mb-6">
-            {data.footerText}
-          </p>
-          <div className="flex gap-4">
-            {data.instagramUrl && (
-              <Link href={data.instagramUrl} target="_blank">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-white/5 hover:bg-primary text-white border-white/10 hover:border-primary"
-                >
-                  <Instagram size={18} />
-                </Button>
-              </Link>
-            )}
-            {data.facebookUrl && (
-              <Link href={data.facebookUrl} target="_blank">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-white/5 hover:bg-blue-600 text-white border-white/10 hover:border-blue-600"
-                >
-                  <Facebook size={18} />
-                </Button>
-              </Link>
-            )}
-            {data.twitterUrl && (
-              <Link href={data.twitterUrl} target="_blank">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-white/5 hover:bg-sky-500 text-white border-white/10 hover:border-sky-500"
-                >
-                  <Twitter size={18} />
-                </Button>
-              </Link>
-            )}
-          </div>
+          <FooterConfigLoader />
         </div>
         <div>
           <h4 className="font-bold text-lg mb-6 text-foreground">Navegación</h4>
@@ -137,11 +80,11 @@ export default function Footer() {
           <ul className="space-y-4 text-muted-foreground text-sm">
             <li className="flex gap-3">
               <MapPin size={18} className="text-primary mt-0.5" />
-              {data.contactAddress}
+              Cra 12 # 93 - 15, Bogotá
             </li>
             <li className="flex gap-3">
               <Phone size={18} className="text-primary mt-0.5" />
-              {data.contactPhone}
+              +57 (300) 123-4567
             </li>
             <li className="flex gap-3">
               <ShieldCheck size={18} className="text-green-500 mt-0.5" /> Pagos

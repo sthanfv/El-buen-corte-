@@ -99,5 +99,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/api/:path*', // APIs
+    '/admin/:path*', // panel admin
+    '/auth/:path*', // login / sesión
+  ],
 };
