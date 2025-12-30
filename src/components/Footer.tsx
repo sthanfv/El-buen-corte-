@@ -75,16 +75,6 @@ export default function Footer() {
             </li>
           </ul>
         </div>
-        <div>
-          <h4 className="font-bold text-lg mb-6 text-foreground">Contacto</h4>
-          <FooterConfigLoader />
-          <ul className="space-y-4 text-muted-foreground text-sm mt-4">
-            <li className="flex gap-3">
-              <ShieldCheck size={18} className="text-green-500 mt-0.5" /> Pagos
-              Seguros
-            </li>
-          </ul>
-        </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 pt-8 border-t border-white/10 flex justify-center items-center text-xs text-muted-foreground font-medium">
         <p>
